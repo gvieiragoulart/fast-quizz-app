@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from datetime import timedelta
+from fastapi.security import OAuth2PasswordRequestForm
 
 from ...infrastructure.database import get_db
 from ...infrastructure.auth import verify_password, create_access_token, get_password_hash
 from ...infrastructure.repositories import UserRepositoryImpl
 from ...application.use_cases import UserUseCases
 from ...domain.entities.user import User
-from ..schemas import Token, LoginRequest, UserCreate, UserResponse
+from ..schemas import Token, UserCreate, UserResponse
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
@@ -41,14 +41,17 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)) -> User
 
 
 @router.post("/login", response_model=Token)
-async def login(login_data: LoginRequest, db: Session = Depends(get_db)) -> Token:
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
+) -> Token:
     """Authenticate a user and return a JWT token."""
     user_repo = UserRepositoryImpl(db)
     user_use_cases = UserUseCases(user_repo)
 
-    user = await user_use_cases.get_user_by_username(login_data.username)
+    user = await user_use_cases.get_user_by_username(form_data.username)
 
-    if not user or not verify_password(login_data.password, user.hashed_password):
+    if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -57,8 +60,13 @@ async def login(login_data: LoginRequest, db: Session = Depends(get_db)) -> Toke
 
     if not user.is_active:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Inactive user",
         )
 
     access_token = create_access_token(data={"sub": user.username})
-    return Token(access_token=access_token, token_type="bearer")
+
+    return Token(
+        access_token=access_token,
+        token_type="bearer",
+    )

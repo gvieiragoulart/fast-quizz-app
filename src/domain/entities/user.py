@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Optional
 from uuid import UUID, uuid4
+from ..enum.user_type import UserType
 
 
 class User:
@@ -13,6 +14,7 @@ class User:
         hashed_password: str,
         id: Optional[UUID] = None,
         is_active: bool = True,
+        type: Optional[UserType] = UserType.ADVENTURE,
         created_at: Optional[datetime] = None,
         updated_at: Optional[datetime] = None,
     ):
@@ -21,8 +23,9 @@ class User:
         self.email = email
         self.hashed_password = hashed_password
         self.is_active = is_active
-        self.created_at = created_at or datetime.utcnow()
-        self.updated_at = updated_at or datetime.utcnow()
+        self.type = type
+        self.created_at = created_at or datetime.now()
+        self.updated_at = updated_at or datetime.now()
 
     def __repr__(self) -> str:
         return f"User(id={self.id}, username={self.username}, email={self.email})"
