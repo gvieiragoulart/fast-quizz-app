@@ -10,7 +10,7 @@ class Quiz:
         self,
         title: str,
         description: str,
-        journey_id: UUID,
+        journey_id: Optional[UUID] = None,
         id: Optional[UUID] = None,
         created_at: Optional[datetime] = None,
         updated_at: Optional[datetime] = None,
@@ -23,7 +23,7 @@ class Quiz:
         self.updated_at = updated_at or datetime.utcnow()
 
     def __repr__(self) -> str:
-        return f"Quiz(id={self.id}, title={self.title})"
+        return f"Quiz(id={self.id}, title={self.title}, journey_id={self.journey_id})"
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Quiz):

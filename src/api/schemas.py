@@ -75,10 +75,13 @@ class JourneyResponse(JourneyBase):
 class QuizBase(BaseModel):
     title: str = Field(..., min_length=3, max_length=200)
     description: str
+    questions: Optional[List[UUID]] = []
 
 
 class QuizCreate(QuizBase):
-    journey_id: UUID
+    journey_id: Optional[UUID] = Field(
+        None, description="ID of the journey this quiz belongs to"
+    )
 
 
 class QuizUpdate(BaseModel):
@@ -89,7 +92,7 @@ class QuizUpdate(BaseModel):
 
 class QuizResponse(QuizBase):
     id: UUID
-    journey_id: UUID
+    journey_id: Optional[UUID] = None
     created_at: datetime
     updated_at: datetime
 

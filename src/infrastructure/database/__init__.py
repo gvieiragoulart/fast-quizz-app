@@ -10,4 +10,5 @@ __all__ = [
     "get_db",
     "engine",
     "SessionLocal",
+    "seed_user"
 ]

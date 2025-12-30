@@ -30,3 +30,4 @@ def verify_token(token: str) -> Optional[dict]:
         return payload
     except JWTError:
         return None
+

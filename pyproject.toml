@@ -19,6 +19,8 @@ pydantic = {extras = ["email"], version = "^2.5.3"}
 pydantic-settings = "^2.1.0"
 python-dotenv = "^1.0.0"
 aiosqlite = "^0.22.0"
+pyjwt = "^2.10.1"
+pwdlib = {extras = ["argon2"], version = "^0.3.0"}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.4"

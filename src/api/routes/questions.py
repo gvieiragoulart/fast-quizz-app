@@ -24,6 +24,23 @@ from ..dependencies import get_current_active_user
 
 router = APIRouter(prefix="/api/questions", tags=["questions"])
 
+@router.post("/batch", response_model=QuestionResponseWithAnswer, status_code=status.HTTP_201_CREATED)
+async def create_questions_batch(
+    questions_data: List[QuestionCreate],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> List[QuestionResponseWithAnswer]:
+    """Create multiple questions in a batch."""
+    created_questions = []
+    for question_data in questions_data:
+        # Reuse the create_question logic for each question
+        question_response = await create_question(
+            question_data=question_data,
+            db=db,
+            current_user=current_user,
+        )
+        created_questions.append(question_response)
+    return created_questions
 
 @router.post("/", response_model=QuestionResponseWithAnswer, status_code=status.HTTP_201_CREATED)
 async def create_question(

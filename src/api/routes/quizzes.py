@@ -22,20 +22,22 @@ async def create_quiz(
 ) -> QuizResponse:
     """Create a new quiz."""
     # Verify journey exists and belongs to user
-    journey_repo = JourneyRepositoryImpl(db)
-    journey_use_cases = JourneyUseCases(journey_repo)
-    journey = await journey_use_cases.get_journey(quiz_data.journey_id)
 
-    if not journey:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Journey not found"
-        )
+    if quiz_data.journey_id:
+        journey_repo = JourneyRepositoryImpl(db)
+        journey_use_cases = JourneyUseCases(journey_repo)
+        journey = await journey_use_cases.get_journey(quiz_data.journey_id)
 
-    if journey.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to create quiz in this journey",
-        )
+        if not journey:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Journey not found"
+            )
+
+        if journey.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to create quiz in this journey",
+            )
 
     quiz_repo = QuizRepositoryImpl(db)
     quiz_use_cases = QuizUseCases(quiz_repo)
@@ -43,7 +45,7 @@ async def create_quiz(
     quiz = Quiz(
         title=quiz_data.title,
         description=quiz_data.description,
-        journey_id=quiz_data.journey_id,
+        journey_id=quiz_data.journey_id if quiz_data.journey_id else None,
     )
 
     created_quiz = await quiz_use_cases.create_quiz(quiz)

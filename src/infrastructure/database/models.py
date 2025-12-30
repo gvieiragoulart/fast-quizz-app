@@ -42,7 +42,7 @@ class QuizModel(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     title = Column(String(200), nullable=False)
     description = Column(Text, nullable=False)
-    journey_id = Column(UUID(as_uuid=True), ForeignKey("journeys.id"), nullable=False)
+    journey_id = Column(UUID(as_uuid=True), ForeignKey("journeys.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc), nullable=False)
 
