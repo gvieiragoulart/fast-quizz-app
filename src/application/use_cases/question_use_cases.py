@@ -2,6 +2,7 @@ from typing import Optional, List
 from uuid import UUID
 
 from ...domain.entities.question import Question
+from ...domain.entities.option import Option
 from ...domain.repositories.question_repository import QuestionRepository
 
 
@@ -13,9 +14,24 @@ class QuestionUseCases:
 
     async def create_question(self, question: Question) -> Question:
         """Create a new question."""
-        if question.correct_answer not in question.options:
+        # normalize options: accept domain Option instances or mapping/pydantic objects or plain strings
+        normalized_options = []
+        for opt in question.options or []:
+            normalized_options.append(
+                Option(
+                    text=getattr(opt, "text", None),
+                    order=getattr(opt, "order", 0) or 0,
+                    is_correct=getattr(opt, "is_correct", False) or False,
+                    image_url=getattr(opt, "image_url", None),
+                    metadata=getattr(opt, "metadata", None),
+                )
+            )
+
+        question.options = normalized_options
+
+        if question.correct_answer not in [option.text for option in question.options]:
             raise ValueError("Correct answer must be one of the options")
-        
+
         return await self.question_repository.create(question)
 
     async def get_question(self, question_id: UUID) -> Optional[Question]:
@@ -39,8 +55,22 @@ class QuestionUseCases:
         existing_question = await self.question_repository.get_by_id(question.id)
         if not existing_question:
             raise ValueError(f"Question with ID '{question.id}' not found")
+        # normalize options similar to create
+        normalized_options = []
+        for opt in question.options or []:
+            normalized_options.append(
+                Option(
+                    text=getattr(opt, "text", None),
+                    order=getattr(opt, "order", 0) or 0,
+                    is_correct=getattr(opt, "is_correct", False) or False,
+                    image_url=getattr(opt, "image_url", None),
+                    metadata=getattr(opt, "metadata", None),
+                )
+            )
 
-        if question.correct_answer not in question.options:
+        question.options = normalized_options
+
+        if question.correct_answer not in [option.text for option in question.options]:
             raise ValueError("Correct answer must be one of the options")
 
         return await self.question_repository.update(question)

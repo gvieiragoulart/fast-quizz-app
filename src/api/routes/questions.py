@@ -19,6 +19,7 @@ from ..schemas import (
     QuestionResponseWithAnswer,
     AnswerCheck,
     AnswerResult,
+    OptionAnswerResponse,
 )
 from ..dependencies import get_current_active_user
 
@@ -75,7 +76,15 @@ async def create_question(
             id=created_question.id,
             text=created_question.text,
             quiz_id=created_question.quiz_id,
-            options=created_question.options,
+            options=[
+                OptionAnswerResponse(
+                    id=opt.id,
+                    text=opt.text,
+                    order=opt.order,
+                    is_correct=opt.is_correct,
+                )
+                for opt in created_question.options
+            ],
             correct_answer=created_question.correct_answer,
             created_at=created_question.created_at,
             updated_at=created_question.updated_at,

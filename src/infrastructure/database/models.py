@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Text, ARRAY
+from sqlalchemy import JSON, Column, Integer, String, Boolean, DateTime, ForeignKey, Text, ARRAY
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
@@ -56,9 +56,31 @@ class QuestionModel(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     text = Column(Text, nullable=False)
     quiz_id = Column(UUID(as_uuid=True), ForeignKey("quizzes.id"), nullable=False)
-    options = Column(ARRAY(String), nullable=False)
     correct_answer = Column(String(500), nullable=False)
     created_at = Column(DateTime, default=datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc), nullable=False)
 
+
+    options = relationship(
+        "QuestionOptionModel",
+        back_populates="question",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="QuestionOptionModel.order",
+    )
     quiz = relationship("QuizModel", back_populates="questions")
+
+class QuestionOptionModel(Base):
+    __tablename__ = "question_options"
+
+    id = Column(UUID(as_uuid=True), primary_key=True)
+    question_id = Column(UUID(as_uuid=True), ForeignKey("questions.id"), nullable=False)
+    text = Column(Text, nullable=True)
+    order = Column(Integer, nullable=False, default=0)
+    is_correct = Column(Boolean, nullable=False, default=False)
+    image_url = Column(String(1000), nullable=True)
+    metadata_json = Column(JSON, nullable=True)
+    created_at = Column(DateTime, nullable=False)
+    updated_at = Column(DateTime, nullable=False)
+
+    question = relationship("QuestionModel", back_populates="options")

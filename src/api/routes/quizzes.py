@@ -62,8 +62,9 @@ async def create_quiz(
     created_quiz = await quiz_use_cases.create_quiz(quiz)
 
     questions = quiz_data.questions or []
+    created_questions = []
+
     if questions:
-        created_questions = []
         question_repo = QuestionRepositoryImpl(db)
         question_use_cases = QuestionUseCases(question_repo)
         for question in questions:

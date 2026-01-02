@@ -70,13 +70,27 @@ class JourneyResponse(JourneyBase):
     class Config:
         from_attributes = True
 
+#Options Schemas
+class OptionBase(BaseModel):
+    text: str
+    order: int = 0
+    is_correct: bool = False
+    image_url: Optional[str] = None
+    metadata: Optional[dict] = {}
 
+class OptionAnswerResponse(BaseModel):
+    id: UUID
+    text: str
+    order: int
+    is_correct: bool
 
-
+    class Config:
+        from_attributes = True
+ 
 # Question Schemas
 class QuestionBase(BaseModel):
     text: str
-    options: List[str] = Field(..., min_items=2, max_items=6)
+    options: List[OptionBase] = Field(..., min_items=2, max_items=6)
     correct_answer: str
 
 
@@ -86,7 +100,7 @@ class QuestionCreate(QuestionBase):
 
 class QuestionUpdate(BaseModel):
     text: Optional[str] = None
-    options: Optional[List[str]] = Field(None, min_items=2, max_items=6)
+    options: Optional[List[OptionBase]] = Field(None, min_items=2, max_items=6)
     correct_answer: Optional[str] = None
     quiz_id: Optional[UUID] = None
 
@@ -95,7 +109,7 @@ class QuestionResponse(BaseModel):
     id: UUID
     text: str
     quiz_id: UUID
-    options: List[str]
+    options: List[OptionAnswerResponse] = []
     created_at: datetime
     updated_at: datetime
 

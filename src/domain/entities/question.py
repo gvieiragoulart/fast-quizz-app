@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Optional, List
 from uuid import UUID, uuid4
+from .option import Option
 
 
 class Question:
@@ -10,7 +11,7 @@ class Question:
         self,
         text: str,
         quiz_id: UUID,
-        options: List[str],
+        options: List[Option],
         correct_answer: str,
         id: Optional[UUID] = None,
         created_at: Optional[datetime] = None,
