@@ -71,33 +71,6 @@ class JourneyResponse(JourneyBase):
         from_attributes = True
 
 
-# Quiz Schemas
-class QuizBase(BaseModel):
-    title: str = Field(..., min_length=3, max_length=200)
-    description: str
-    questions: Optional[List[UUID]] = []
-
-
-class QuizCreate(QuizBase):
-    journey_id: Optional[UUID] = Field(
-        None, description="ID of the journey this quiz belongs to"
-    )
-
-
-class QuizUpdate(BaseModel):
-    title: Optional[str] = Field(None, min_length=3, max_length=200)
-    description: Optional[str] = None
-    journey_id: Optional[UUID] = None
-
-
-class QuizResponse(QuizBase):
-    id: UUID
-    journey_id: Optional[UUID] = None
-    created_at: datetime
-    updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 # Question Schemas
@@ -142,3 +115,37 @@ class AnswerCheck(BaseModel):
 class AnswerResult(BaseModel):
     is_correct: bool
     correct_answer: Optional[str] = None
+
+
+# Quiz Schemas
+
+class QuizzQuestionCreate(QuestionBase):
+    question_id: Optional[UUID] = None
+
+class QuizBase(BaseModel):
+    title: str = Field(..., min_length=3, max_length=200)
+    description: str
+    questions: Optional[List[QuestionBase]] = []
+
+
+class QuizCreate(QuizBase):
+    journey_id: Optional[UUID] = Field(
+        None, description="ID of the journey this quiz belongs to"
+    )
+
+
+class QuizUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=3, max_length=200)
+    description: Optional[str] = None
+    journey_id: Optional[UUID] = None
+
+
+class QuizResponse(QuizBase):
+    id: UUID
+    journey_id: Optional[UUID] = None
+    created_at: datetime
+    updated_at: datetime
+    questions: Optional[List[QuestionResponse]] = []
+
+    class Config:
+        from_attributes = True

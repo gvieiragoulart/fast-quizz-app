@@ -24,7 +24,7 @@ from ..dependencies import get_current_active_user
 
 router = APIRouter(prefix="/api/questions", tags=["questions"])
 
-@router.post("/batch", response_model=QuestionResponseWithAnswer, status_code=status.HTTP_201_CREATED)
+@router.post("/batch", response_model=List[QuestionResponseWithAnswer], status_code=status.HTTP_201_CREATED)
 async def create_questions_batch(
     questions_data: List[QuestionCreate],
     db: Session = Depends(get_db),
@@ -39,7 +39,7 @@ async def create_questions_batch(
             db=db,
             current_user=current_user,
         )
-        created_questions.append(question_response)
+        created_questions.append(question_response.dict())  # Ensure conversion to dict
     return created_questions
 
 @router.post("/", response_model=QuestionResponseWithAnswer, status_code=status.HTTP_201_CREATED)
@@ -57,17 +57,6 @@ async def create_question(
     if not quiz:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found"
-        )
-
-    # Verify journey belongs to user
-    journey_repo = JourneyRepositoryImpl(db)
-    journey_use_cases = JourneyUseCases(journey_repo)
-    journey = await journey_use_cases.get_journey(quiz.journey_id)
-
-    if not journey or journey.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to create question in this quiz",
         )
 
     question_repo = QuestionRepositoryImpl(db)

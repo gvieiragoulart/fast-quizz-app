@@ -1,6 +1,6 @@
 from typing import Optional, List
 from uuid import UUID
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from ...domain.entities.quiz import Quiz
 from ...domain.repositories.quiz_repository import QuizRepository
@@ -13,9 +13,9 @@ class QuizRepositoryImpl(QuizRepository):
     def __init__(self, db: Session):
         self.db = db
 
-    def _to_entity(self, model: QuizModel) -> Quiz:
+    def _to_entity(self, model: QuizModel, include_questions: bool = False) -> Quiz:
         """Convert database model to domain entity."""
-        return Quiz(
+        quizz = Quiz(
             id=model.id,
             title=model.title,
             description=model.description,
@@ -23,6 +23,15 @@ class QuizRepositoryImpl(QuizRepository):
             created_at=model.created_at,
             updated_at=model.updated_at,
         )
+        if include_questions:
+            from .question_repository_impl import QuestionRepositoryImpl
+
+            question_repo = QuestionRepositoryImpl(self.db)
+            questions = [
+                question_repo._to_entity(q_model) for q_model in model.questions
+            ]
+            quizz.questions = questions  # type: ignore
+        return quizz
 
     def _to_model(self, entity: Quiz) -> QuizModel:
         """Convert domain entity to database model."""
@@ -43,14 +52,19 @@ class QuizRepositoryImpl(QuizRepository):
         self.db.refresh(db_quiz)
         return self._to_entity(db_quiz)
 
-    async def get_by_id(self, quiz_id: UUID) -> Optional[Quiz]:
-        """Get a quiz by ID."""
-        db_quiz = self.db.query(QuizModel).filter(QuizModel.id == quiz_id).first()
-        return self._to_entity(db_quiz) if db_quiz else None
+    async def get_by_id(self, quiz_id: UUID, include_questions: bool = False) -> Optional[Quiz]:
+        """Get a quiz by ID; optionally include questions to avoid extra queries."""
+        query = self.db.query(QuizModel).filter(QuizModel.id == quiz_id)
+        if include_questions:
+            query = query.options(joinedload(QuizModel.questions))
+        db_quiz = query.first()
+        return self._to_entity(db_quiz, include_questions=include_questions) if db_quiz else None
+
 
     async def get_all(self, skip: int = 0, limit: int = 100) -> List[Quiz]:
         """Get all quizzes with pagination."""
         db_quizzes = self.db.query(QuizModel).offset(skip).limit(limit).all()
+        
         return [self._to_entity(db_quiz) for db_quiz in db_quizzes]
 
     async def get_by_journey_id(self, journey_id: UUID, skip: int = 0, limit: int = 100) -> List[Quiz]:

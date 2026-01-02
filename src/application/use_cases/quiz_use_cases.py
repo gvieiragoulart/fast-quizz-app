@@ -15,9 +15,10 @@ class QuizUseCases:
         """Create a new quiz."""
         return await self.quiz_repository.create(quiz)
 
-    async def get_quiz(self, quiz_id: UUID) -> Optional[Quiz]:
+    async def get_quiz(self, quiz_id: UUID, include_questions: bool = False) -> Optional[Quiz]:
         """Get a quiz by ID."""
-        return await self.quiz_repository.get_by_id(quiz_id)
+        return await self.quiz_repository.get_by_id(quiz_id, include_questions=include_questions)
+
 
     async def get_all_quizzes(self, skip: int = 0, limit: int = 100) -> List[Quiz]:
         """Get all quizzes with pagination."""

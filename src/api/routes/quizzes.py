@@ -3,13 +3,24 @@ from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 
+from src.domain.entities.question import Question
+
 from ...infrastructure.database import get_db
-from ...infrastructure.repositories import QuizRepositoryImpl, JourneyRepositoryImpl
-from ...application.use_cases import QuizUseCases, JourneyUseCases
+from ...infrastructure.repositories import (
+    QuizRepositoryImpl, 
+    JourneyRepositoryImpl,
+    QuestionRepositoryImpl,
+)
+from ...application.use_cases import (
+    QuizUseCases, 
+    JourneyUseCases,
+    QuestionUseCases,
+)
 from ...domain.entities.quiz import Quiz
 from ...domain.entities.user import User
 from ..schemas import QuizCreate, QuizResponse, QuizUpdate
 from ..dependencies import get_current_active_user
+
 
 router = APIRouter(prefix="/api/quizzes", tags=["quizzes"])
 
@@ -49,10 +60,33 @@ async def create_quiz(
     )
 
     created_quiz = await quiz_use_cases.create_quiz(quiz)
+
+    questions = quiz_data.questions or []
+    if questions:
+        created_questions = []
+        question_repo = QuestionRepositoryImpl(db)
+        question_use_cases = QuestionUseCases(question_repo)
+        for question in questions:
+            if question.question_id:
+                pass
+
+            created_question = await question_use_cases.create_question(
+                Question(
+                    text=question.text,
+                    options=question.options,
+                    correct_answer=question.correct_answer,
+                    quiz_id=created_quiz.id,
+                )
+            )
+
+            if created_question:
+                created_questions.append(created_question)
+
     return QuizResponse(
         id=created_quiz.id,
         title=created_quiz.title,
         description=created_quiz.description,
+        questions=created_questions,
         journey_id=created_quiz.journey_id,
         created_at=created_quiz.created_at,
         updated_at=created_quiz.updated_at,
@@ -113,21 +147,13 @@ async def get_quiz(
     quiz_repo = QuizRepositoryImpl(db)
     quiz_use_cases = QuizUseCases(quiz_repo)
 
-    quiz = await quiz_use_cases.get_quiz(quiz_id)
+    quiz = await quiz_use_cases.get_quiz(
+        quiz_id, 
+        include_questions=True
+    )
     if not quiz:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found"
-        )
-
-    # Verify journey belongs to user
-    journey_repo = JourneyRepositoryImpl(db)
-    journey_use_cases = JourneyUseCases(journey_repo)
-    journey = await journey_use_cases.get_journey(quiz.journey_id)
-
-    if not journey or journey.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access this quiz",
         )
 
     return QuizResponse(
@@ -137,6 +163,7 @@ async def get_quiz(
         journey_id=quiz.journey_id,
         created_at=quiz.created_at,
         updated_at=quiz.updated_at,
+        questions=quiz.questions or [],
     )
 
 

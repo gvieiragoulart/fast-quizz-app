@@ -14,7 +14,7 @@ class QuizRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_by_id(self, quiz_id: UUID) -> Optional[Quiz]:
+    async def get_by_id(self, quiz_id: UUID, include_questions: bool = False) -> Optional[Quiz]:
         """Get a quiz by ID."""
         pass
 
