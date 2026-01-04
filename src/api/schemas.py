@@ -163,3 +163,13 @@ class QuizResponse(QuizBase):
 
     class Config:
         from_attributes = True
+
+
+# List response for latest quizzes with pagination metadata
+class QuizzesListResponse(BaseModel):
+    items: List[QuizResponse]
+    total_items: int
+    total_pages: int
+
+    class Config:
+        from_attributes = True

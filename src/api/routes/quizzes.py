@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List
 from uuid import UUID
+import math
 
 from src.domain.entities.question import Question
 
@@ -11,6 +13,7 @@ from ...infrastructure.repositories import (
     JourneyRepositoryImpl,
     QuestionRepositoryImpl,
 )
+from ...infrastructure.database.models import QuizModel
 from ...application.use_cases import (
     QuizUseCases, 
     JourneyUseCases,
@@ -18,7 +21,7 @@ from ...application.use_cases import (
 )
 from ...domain.entities.quiz import Quiz
 from ...domain.entities.user import User
-from ..schemas import QuizCreate, QuizResponse, QuizUpdate
+from ..schemas import QuizCreate, QuizResponse, QuizUpdate, QuizzesListResponse
 from ..dependencies import get_current_active_user
 
 
@@ -94,6 +97,53 @@ async def create_quiz(
     )
 
 
+@router.get("/latest", response_model=QuizzesListResponse, status_code=status.HTTP_200_OK)
+async def get_latest_quizzes(page: int = 1, db: Session = Depends(get_db)) -> QuizzesListResponse:
+    """Public endpoint: return latest quizzes ordered by created_at desc, paginated (20 per page).
+
+    Returns a dict with keys: items (list of quizzes), total_items (int), total_pages (int).
+    """
+    if page < 1:
+        page = 1
+    page_size = 20
+    skip = (page - 1) * page_size
+
+    # use repository for DB access
+    quiz_repo = QuizRepositoryImpl(db)
+
+    # total count
+    total_items = quiz_repo.db.query(func.count(QuizModel.id)).scalar() or 0
+    total_pages = math.ceil(total_items / page_size) if total_items else 0
+
+    # run a lightweight query ordering by created_at desc
+    db_quizzes = (
+        quiz_repo.db.query(QuizModel)
+        .order_by(QuizModel.created_at.desc())
+        .offset(skip)
+        .limit(page_size)
+        .all()
+    )
+
+    items = [
+        {
+            "id": q.id,
+            "title": q.title,
+            "description": q.description,
+            "journey_id": q.journey_id,
+            "created_at": q.created_at,
+            "updated_at": q.updated_at,
+            "questions": [],
+        }
+        for q in db_quizzes
+    ]
+
+    return QuizzesListResponse(
+        items=items, 
+        total_items=total_items, 
+        total_pages=total_pages
+    )
+
+
 @router.get("/journey/{journey_id}", response_model=List[QuizResponse])
 async def get_quizzes_by_journey(
     journey_id: UUID,
@@ -166,6 +216,8 @@ async def get_quiz(
         updated_at=quiz.updated_at,
         questions=quiz.questions or [],
     )
+
+
 
 
 @router.put("/{quiz_id}", response_model=QuizResponse)
@@ -256,3 +308,47 @@ async def delete_quiz(
         await quiz_use_cases.delete_quiz(quiz_id)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+
+@router.get("/latest", response_model=QuizzesListResponse, status_code=status.HTTP_200_OK)
+async def get_latest_quizzes(page: int = 1, db: Session = Depends(get_db)) -> QuizzesListResponse:
+    """Public endpoint: return latest quizzes ordered by created_at desc, paginated (20 per page).
+
+    Returns a dict with keys: items (list of quizzes), total_items (int), total_pages (int).
+    """
+    if page < 1:
+        page = 1
+    page_size = 20
+    skip = (page - 1) * page_size
+
+    # use repository for DB access
+    quiz_repo = QuizRepositoryImpl(db)
+
+    # total count
+    total_items = quiz_repo.db.query(func.count(QuizModel.id)).scalar() or 0
+    total_pages = math.ceil(total_items / page_size) if total_items else 0
+
+    # run a lightweight query ordering by created_at desc
+    db_quizzes = (
+        quiz_repo.db.query(QuizModel)
+        .order_by(QuizModel.created_at.desc())
+        .offset(skip)
+        .limit(page_size)
+        .all()
+    )
+
+    items = [
+        {
+            "id": q.id,
+            "title": q.title,
+            "description": q.description,
+            "journey_id": q.journey_id,
+            "created_at": q.created_at,
+            "updated_at": q.updated_at,
+            "questions": [],
+        }
+        for q in db_quizzes
+    ]
+
+    return QuizzesListResponse(items=items, total_items=total_items, total_pages=total_pages)
