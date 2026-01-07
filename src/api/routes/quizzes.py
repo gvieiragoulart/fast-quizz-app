@@ -35,9 +35,13 @@ async def create_quiz(
     current_user: User = Depends(get_current_active_user),
 ) -> QuizResponse:
     """Create a new quiz."""
-    # Verify journey exists and belongs to user
-
     if quiz_data.journey_id:
+        if not current_user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required to create quiz in a journey",
+            )
+        
         journey_repo = JourneyRepositoryImpl(db)
         journey_use_cases = JourneyUseCases(journey_repo)
         journey = await journey_use_cases.get_journey(quiz_data.journey_id)
@@ -192,7 +196,6 @@ async def get_quizzes_by_journey(
 async def get_quiz(
     quiz_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ) -> QuizResponse:
     """Get a quiz by ID."""
     quiz_repo = QuizRepositoryImpl(db)

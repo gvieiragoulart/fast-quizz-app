@@ -93,13 +93,12 @@ async def create_question(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@router.get("/quiz/{quiz_id}", response_model=List[QuestionResponse])
+@router.get("/quiz", response_model=List[QuestionResponse])
 async def get_questions_by_quiz(
     quiz_id: UUID,
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ) -> List[QuestionResponse]:
     """Get all questions for a specific quiz (without correct answers)."""
     # Verify quiz exists and belongs to user
@@ -110,17 +109,6 @@ async def get_questions_by_quiz(
     if not quiz:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found"
-        )
-
-    # Verify journey belongs to user
-    journey_repo = JourneyRepositoryImpl(db)
-    journey_use_cases = JourneyUseCases(journey_repo)
-    journey = await journey_use_cases.get_journey(quiz.journey_id)
-
-    if not journey or journey.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access this quiz",
         )
 
     question_repo = QuestionRepositoryImpl(db)

@@ -32,6 +32,10 @@ class UserUseCases:
     async def get_user_by_username(self, username: str) -> Optional[User]:
         """Get a user by username."""
         return await self.user_repository.get_by_username(username)
+    
+    async def get_user_by_email(self, email: str) -> Optional[User]:
+        """Get a user by email."""
+        return await self.user_repository.get_by_email(email)
 
     async def get_all_users(self, skip: int = 0, limit: int = 100) -> List[User]:
         """Get all users with pagination."""
