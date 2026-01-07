@@ -75,9 +75,6 @@ async def create_quiz(
         question_repo = QuestionRepositoryImpl(db)
         question_use_cases = QuestionUseCases(question_repo)
         for question in questions:
-            if question.question_id:
-                pass
-
             created_question = await question_use_cases.create_question(
                 Question(
                     text=question.text,
