@@ -12,7 +12,7 @@ class Question:
         text: str,
         quiz_id: UUID,
         options: List[Option],
-        correct_answer: str,
+        correct_answer: int,
         id: Optional[UUID] = None,
         created_at: Optional[datetime] = None,
         updated_at: Optional[datetime] = None,

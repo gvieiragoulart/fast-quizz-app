@@ -8,6 +8,7 @@ class Option:
 
     def __init__(
         self,
+        reference_id: int,
         text: Optional[str] = None,
         order: int = 0,
         is_correct: bool = False,
@@ -18,6 +19,7 @@ class Option:
         updated_at: Optional[datetime] = None,
     ):
         self.id = id or uuid4()
+        self.reference_id = reference_id
         self.text = text
         self.order = order
         self.is_correct = is_correct
@@ -28,7 +30,7 @@ class Option:
 
     def __repr__(self) -> str:
         preview = self.text[:30] + "..." if self.text and len(self.text) > 30 else self.text
-        return f"Option(id={self.id}, text={preview}, order={self.order}, is_correct={self.is_correct})"
+        return f"Option(id={self.id}, reference_id={self.reference_id}, text={preview}, order={self.order}, is_correct={self.is_correct})"
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Option):

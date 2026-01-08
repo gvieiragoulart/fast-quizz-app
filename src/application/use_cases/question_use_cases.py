@@ -14,13 +14,13 @@ class QuestionUseCases:
 
     async def create_question(self, question: Question) -> Question:
         """Create a new question."""
-        # normalize options: accept domain Option instances or mapping/pydantic objects or plain strings
         normalized_options = []
-        for opt in question.options or []:
+        for index, opt in enumerate(question.options or []):
             normalized_options.append(
                 Option(
+                    reference_id=getattr(opt, "reference_id", index),
                     text=getattr(opt, "text", None),
-                    order=getattr(opt, "order", 0) or 0,
+                    order=getattr(opt, "order", index + 1),
                     is_correct=getattr(opt, "is_correct", False) or False,
                     image_url=getattr(opt, "image_url", None),
                     metadata=getattr(opt, "metadata", None),
@@ -29,8 +29,13 @@ class QuestionUseCases:
 
         question.options = normalized_options
 
-        if question.correct_answer not in [option.text for option in question.options]:
+        if question.correct_answer not in [option.reference_id for option in question.options]:
             raise ValueError("Correct answer must be one of the options")
+        
+        reference_ids = [option.reference_id for option in question.options]
+        if len(reference_ids) != len(set(reference_ids)) or None in reference_ids:
+            raise ValueError("Option reference_ids must be unique and not None")
+            
 
         return await self.question_repository.create(question)
 

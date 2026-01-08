@@ -1,4 +1,4 @@
-from sqlalchemy import JSON, Column, Integer, String, Boolean, DateTime, ForeignKey, Text, ARRAY
+from sqlalchemy import JSON, Column, Integer, SmallInteger, String, Boolean, DateTime, ForeignKey, Text, ARRAY
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
@@ -56,7 +56,7 @@ class QuestionModel(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     text = Column(Text, nullable=False)
     quiz_id = Column(UUID(as_uuid=True), ForeignKey("quizzes.id"), nullable=False)
-    correct_answer = Column(String(500), nullable=False)
+    correct_answer = Column(SmallInteger, nullable=False) # referencia o reference_id of the correct option
     created_at = Column(DateTime, default=datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc), nullable=False)
 
@@ -75,6 +75,7 @@ class QuestionOptionModel(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True)
     question_id = Column(UUID(as_uuid=True), ForeignKey("questions.id"), nullable=False)
+    reference_id = Column(SmallInteger, nullable=True)
     text = Column(Text, nullable=True)
     order = Column(Integer, nullable=False, default=0)
     is_correct = Column(Boolean, nullable=False, default=False)
@@ -84,3 +85,31 @@ class QuestionOptionModel(Base):
     updated_at = Column(DateTime, nullable=False)
 
     question = relationship("QuestionModel", back_populates="options")
+
+class ResultsModel(Base):
+    __tablename__ = "results"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True) # Allow null for anonymous users
+    respondent_name = Column(String(200), nullable=False)
+    quiz_id = Column(UUID(as_uuid=True), ForeignKey("quizzes.id"), nullable=False)
+    score = Column(Integer, nullable=False)
+    total_questions = Column(Integer, nullable=False)
+    taken_at = Column(DateTime, default=datetime.now(timezone.utc), nullable=False)
+
+    user = relationship("UserModel")
+    quiz = relationship("QuizModel")
+
+class AnswerResultModel(Base):
+    __tablename__ = "answer_results"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    result_id = Column(UUID(as_uuid=True), ForeignKey("results.id"), nullable=False)
+    question_id = Column(UUID(as_uuid=True), ForeignKey("questions.id"), nullable=False)
+    selected_option_id = Column(UUID(as_uuid=True), ForeignKey("question_options.id"), nullable=True)
+    is_correct = Column(Boolean, nullable=False)
+    answered_at = Column(DateTime, default=datetime.now(timezone.utc), nullable=False)
+
+    result = relationship("ResultsModel")
+    question = relationship("QuestionModel")
+    selected_option = relationship("QuestionOptionModel")
