@@ -43,4 +43,4 @@ jobs:
           # default test DB for CI
           DATABASE_URL: sqlite:///./dev.db
         run: |
-          pytest tests/unit
+          pytest tests/ --cov=src --cov-report=xml
