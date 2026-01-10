@@ -2,8 +2,9 @@
 name = "fast-quizz-app"
 version = "0.1.0"
 description = "FastAPI Quiz App with Clean Architecture"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["Gabriel Goulart <your.email@example.com>"]
 readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.11"
