@@ -2,88 +2,110 @@ import pytest
 from fastapi.testclient import TestClient
 
 
-def get_auth_token(client: TestClient, username: str = "testuser") -> str:
-    """Helper function to get authentication token."""
-    client.post(
-        "/api/auth/register",
-        json={
-            "username": username,
-            "email": f"{username}@example.com",
-            "password": "testpassword123",
-        },
-    )
-    response = client.post(
-        "/api/auth/login",
-        json={"username": username, "password": "testpassword123"},
-    )
-    return response.json()["access_token"]
-
-
-def create_journey_and_quiz(client: TestClient, token: str) -> str:
-    """Helper function to create journey and quiz, return quiz ID."""
-    journey_response = client.post(
-        "/api/journeys/",
-        json={"title": "Test Journey", "description": "Test Description"},
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    journey_id = journey_response.json()["id"]
-
+def create_quiz(client: TestClient, token: str) -> str:
+    """Helper function to create quiz, return quiz ID."""
     quiz_response = client.post(
         "/api/quizzes/",
         json={
             "title": "Test Quiz",
             "description": "Test Description",
-            "journey_id": journey_id,
         },
         headers={"Authorization": f"Bearer {token}"},
     )
     return quiz_response.json()["id"]
 
 
-def test_create_question(client: TestClient) -> None:
+def make_options(texts: list) -> list:
+    """Helper to create options in the expected format."""
+    return [
+        {"reference_id": i + 1, "text": text, "order": i + 1}
+        for i, text in enumerate(texts)
+    ]
+
+
+def test_create_question(client: TestClient, get_auth_token) -> None:
     """Test creating a question."""
-    token = get_auth_token(client)
-    quiz_id = create_journey_and_quiz(client, token)
+    token = get_auth_token
+    quiz_id = create_quiz(client, token)
 
     response = client.post(
         "/api/questions/",
         json={
             "text": "What is 2 + 2?",
             "quiz_id": quiz_id,
-            "options": ["3", "4", "5", "6"],
-            "correct_answer": "4",
+            "options": [
+                {
+                    "reference_id": 1,
+                    "text": "teste3",
+                    "order": 1,
+
+                },
+                {
+                    "reference_id": 2,
+                    "text": "teste4",
+                    "order": 2,
+                    "is_correct": True
+                },
+                {
+                    "reference_id": 3,
+                    "text": "teste5",
+                    "order": 3
+                },
+                {
+                    "reference_id": 4,
+                    "text": "teste6",
+                    "order": 4
+                }
+            ],
+            "correct_answer": 2,
         },
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 201
     data = response.json()
     assert data["text"] == "What is 2 + 2?"
-    assert data["correct_answer"] == "4"
+    assert data["correct_answer"] == 2
     assert len(data["options"]) == 4
 
 
-def test_create_question_invalid_answer(client: TestClient) -> None:
+def test_create_question_invalid_answer(client: TestClient, get_auth_token) -> None:
     """Test creating a question with invalid correct answer."""
-    token = get_auth_token(client)
-    quiz_id = create_journey_and_quiz(client, token)
+    token = get_auth_token
+    quiz_id = create_quiz(client, token)
 
     response = client.post(
         "/api/questions/",
         json={
             "text": "What is 2 + 2?",
             "quiz_id": quiz_id,
-            "options": ["3", "4", "5", "6"],
-            "correct_answer": "7",  # Not in options
+            "options": [
+                {
+                    "reference_id": 1,
+                    "text": "3",
+                    "order": 1,
+                },
+                {
+                    "reference_id": 2,
+                    "text": "4",
+                    "order": 2,
+                },
+                {
+                    "reference_id": 3,
+                    "text": "5",
+                    "order": 3,
+                },
+            ],
+            "correct_answer": 7,  # Not in options (reference_ids are 1, 2, 3)
         },
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 400
 
 
-def test_get_questions_by_quiz(client: TestClient) -> None:
+def test_get_questions_by_quiz(client: TestClient, get_auth_token) -> None:
     """Test getting all questions for a quiz."""
-    token = get_auth_token(client)
-    quiz_id = create_journey_and_quiz(client, token)
+    token = get_auth_token
+    quiz_id = create_quiz(client, token)
 
     # Create questions
     client.post(
@@ -91,8 +113,19 @@ def test_get_questions_by_quiz(client: TestClient) -> None:
         json={
             "text": "Question 1",
             "quiz_id": quiz_id,
-            "options": ["A", "B"],
-            "correct_answer": "A",
+            "options": [
+                {
+                    "reference_id": 1,
+                    "text": "A",
+                    "order": 1,
+                },
+                {
+                    "reference_id": 2,
+                    "text": "B",
+                    "order": 2,
+                }
+            ],
+            "correct_answer": 1,
         },
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -101,15 +134,26 @@ def test_get_questions_by_quiz(client: TestClient) -> None:
         json={
             "text": "Question 2",
             "quiz_id": quiz_id,
-            "options": ["C", "D"],
-            "correct_answer": "C",
+            "options": [
+                {
+                    "reference_id": 1,
+                    "text": "C",
+                    "order": 1,
+                },
+                {
+                    "reference_id": 2,
+                    "text": "D",
+                    "order": 2,
+                }
+            ],
+            "correct_answer": 1,
         },
         headers={"Authorization": f"Bearer {token}"},
     )
 
-    # Get questions (should not include correct answers)
+    # Get questions via query param (should not include correct answers)
     response = client.get(
-        f"/api/questions/quiz/{quiz_id}",
+        f"/api/questions/quiz?quiz_id={quiz_id}",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
@@ -119,19 +163,19 @@ def test_get_questions_by_quiz(client: TestClient) -> None:
     assert "correct_answer" not in data[0]
 
 
-def test_get_question_by_id(client: TestClient) -> None:
+def test_get_question_by_id(client: TestClient, get_auth_token) -> None:
     """Test getting a question by ID."""
-    token = get_auth_token(client)
-    quiz_id = create_journey_and_quiz(client, token)
+    token = get_auth_token
+    quiz_id = create_quiz(client, token)
 
-    # Create question
+    # Create question with proper options format
     create_response = client.post(
         "/api/questions/",
         json={
             "text": "Test Question",
             "quiz_id": quiz_id,
-            "options": ["A", "B", "C"],
-            "correct_answer": "B",
+            "options": make_options(["A", "B", "C"]),
+            "correct_answer": 2,  # reference_id 2 = "B"
         },
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -147,80 +191,19 @@ def test_get_question_by_id(client: TestClient) -> None:
     assert data["text"] == "Test Question"
     assert "correct_answer" not in data
 
-
-def test_check_answer_correct(client: TestClient) -> None:
-    """Test checking a correct answer."""
-    token = get_auth_token(client)
-    quiz_id = create_journey_and_quiz(client, token)
-
-    # Create question
-    create_response = client.post(
-        "/api/questions/",
-        json={
-            "text": "What is 2 + 2?",
-            "quiz_id": quiz_id,
-            "options": ["3", "4", "5"],
-            "correct_answer": "4",
-        },
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    question_id = create_response.json()["id"]
-
-    # Check correct answer
-    response = client.post(
-        f"/api/questions/{question_id}/check",
-        json={"answer": "4"},
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert response.status_code == 200
-    data = response.json()
-    assert data["is_correct"] is True
-    assert data["correct_answer"] is None
-
-
-def test_check_answer_incorrect(client: TestClient) -> None:
-    """Test checking an incorrect answer."""
-    token = get_auth_token(client)
-    quiz_id = create_journey_and_quiz(client, token)
-
-    # Create question
-    create_response = client.post(
-        "/api/questions/",
-        json={
-            "text": "What is 2 + 2?",
-            "quiz_id": quiz_id,
-            "options": ["3", "4", "5"],
-            "correct_answer": "4",
-        },
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    question_id = create_response.json()["id"]
-
-    # Check incorrect answer
-    response = client.post(
-        f"/api/questions/{question_id}/check",
-        json={"answer": "3"},
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert response.status_code == 200
-    data = response.json()
-    assert data["is_correct"] is False
-    assert data["correct_answer"] == "4"
-
-
-def test_update_question(client: TestClient) -> None:
+def test_update_question(client: TestClient, get_auth_token) -> None:
     """Test updating a question."""
-    token = get_auth_token(client)
-    quiz_id = create_journey_and_quiz(client, token)
+    token = get_auth_token
+    quiz_id = create_quiz(client, token)
 
-    # Create question
+    # Create question with proper options format
     create_response = client.post(
         "/api/questions/",
         json={
             "text": "Original Question",
             "quiz_id": quiz_id,
-            "options": ["A", "B"],
-            "correct_answer": "A",
+            "options": make_options(["A", "B"]),
+            "correct_answer": 1,  # reference_id 1 = "A"
         },
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -229,7 +212,9 @@ def test_update_question(client: TestClient) -> None:
     # Update question
     response = client.put(
         f"/api/questions/{question_id}",
-        json={"text": "Updated Question"},
+        json={
+            "text": "Updated Question",
+        },
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
@@ -237,19 +222,19 @@ def test_update_question(client: TestClient) -> None:
     assert data["text"] == "Updated Question"
 
 
-def test_delete_question(client: TestClient) -> None:
+def test_delete_question(client: TestClient, get_auth_token) -> None:
     """Test deleting a question."""
-    token = get_auth_token(client)
-    quiz_id = create_journey_and_quiz(client, token)
+    token = get_auth_token
+    quiz_id = create_quiz(client, token)
 
-    # Create question
+    # Create question with proper options format
     create_response = client.post(
         "/api/questions/",
         json={
             "text": "To Be Deleted",
             "quiz_id": quiz_id,
-            "options": ["A", "B"],
-            "correct_answer": "A",
+            "options": make_options(["A", "B"]),
+            "correct_answer": 1,  # reference_id 1 = "A"
         },
         headers={"Authorization": f"Bearer {token}"},
     )

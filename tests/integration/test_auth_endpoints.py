@@ -85,7 +85,7 @@ def test_login_success(client: TestClient) -> None:
     # Login
     response = client.post(
         "/api/auth/login",
-        json={"username": "testuser", "password": "testpassword123"},
+        json={"email": "test@example.com", "password": "testpassword123"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -108,7 +108,7 @@ def test_login_wrong_password(client: TestClient) -> None:
     # Try to login with wrong password
     response = client.post(
         "/api/auth/login",
-        json={"username": "testuser", "password": "wrongpassword"},
+        json={"email": "test@example.com", "password": "wrongpassword"},
     )
     assert response.status_code == 401
 
@@ -117,6 +117,6 @@ def test_login_nonexistent_user(client: TestClient) -> None:
     """Test login with non-existent user."""
     response = client.post(
         "/api/auth/login",
-        json={"username": "nonexistent", "password": "password123"},
+        json={"email": "nonexistent@example.com", "password": "password123"},
     )
     assert response.status_code == 401

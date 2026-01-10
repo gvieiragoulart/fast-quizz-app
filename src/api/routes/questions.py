@@ -79,6 +79,7 @@ async def create_question(
             options=[
                 OptionAnswerResponse(
                     id=opt.id,
+                    reference_id=opt.reference_id,
                     text=opt.text,
                     order=opt.order,
                     is_correct=opt.is_correct,
@@ -90,7 +91,10 @@ async def create_question(
             updated_at=created_question.updated_at,
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail=str(e)
+        )
 
 
 @router.get("/quiz", response_model=List[QuestionResponse])
@@ -156,15 +160,17 @@ async def get_question(
             status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found"
         )
 
-    journey_repo = JourneyRepositoryImpl(db)
-    journey_use_cases = JourneyUseCases(journey_repo)
-    journey = await journey_use_cases.get_journey(quiz.journey_id)
+    # Only check journey authorization if quiz has a journey
+    if quiz.journey_id:
+        journey_repo = JourneyRepositoryImpl(db)
+        journey_use_cases = JourneyUseCases(journey_repo)
+        journey = await journey_use_cases.get_journey(quiz.journey_id)
 
-    if not journey or journey.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access this question",
-        )
+        if not journey or journey.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to access this question",
+            )
 
     return QuestionResponse(
         id=question.id,
@@ -173,50 +179,6 @@ async def get_question(
         options=question.options,
         created_at=question.created_at,
         updated_at=question.updated_at,
-    )
-
-
-@router.post("/{question_id}/check", response_model=AnswerResult)
-async def check_answer(
-    question_id: UUID,
-    answer_data: AnswerCheck,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-) -> AnswerResult:
-    """Check if an answer is correct for a question."""
-    question_repo = QuestionRepositoryImpl(db)
-    question_use_cases = QuestionUseCases(question_repo)
-
-    question = await question_use_cases.get_question(question_id)
-    if not question:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Question not found"
-        )
-
-    # Verify quiz and journey belong to user
-    quiz_repo = QuizRepositoryImpl(db)
-    quiz_use_cases = QuizUseCases(quiz_repo)
-    quiz = await quiz_use_cases.get_quiz(question.quiz_id)
-
-    if not quiz:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found"
-        )
-
-    journey_repo = JourneyRepositoryImpl(db)
-    journey_use_cases = JourneyUseCases(journey_repo)
-    journey = await journey_use_cases.get_journey(quiz.journey_id)
-
-    if not journey or journey.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access this question",
-        )
-
-    is_correct = question.is_correct(answer_data.answer)
-    return AnswerResult(
-        is_correct=is_correct,
-        correct_answer=question.correct_answer if not is_correct else None,
     )
 
 
@@ -241,51 +203,37 @@ async def update_question(
     quiz_repo = QuizRepositoryImpl(db)
     quiz_use_cases = QuizUseCases(quiz_repo)
     quiz = await quiz_use_cases.get_quiz(question.quiz_id)
-
+        
     if not quiz:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found"
         )
 
-    journey_repo = JourneyRepositoryImpl(db)
-    journey_use_cases = JourneyUseCases(journey_repo)
-    journey = await journey_use_cases.get_journey(quiz.journey_id)
-
-    if not journey or journey.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to update this question",
+    try:
+        updated_question = await question_use_cases.update_question(
+            Question(
+                id=question.id,
+                text=question_data.text if question_data.text is not None else question.text,
+                quiz_id=question.quiz_id,
+                options=question_data.options if question_data.options is not None else question.options,
+                correct_answer=question_data.correct_answer if question_data.correct_answer is not None else question.correct_answer,
+            )
         )
 
-    # Update fields if provided
-    if question_data.text is not None:
-        question.text = question_data.text
-    if question_data.options is not None:
-        question.options = question_data.options
-    if question_data.correct_answer is not None:
-        question.correct_answer = question_data.correct_answer
-    if question_data.quiz_id is not None:
-        # Verify new quiz exists and belongs to user
-        new_quiz = await quiz_use_cases.get_quiz(question_data.quiz_id)
-        if not new_quiz:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="New quiz not found"
-            )
-        new_journey = await journey_use_cases.get_journey(new_quiz.journey_id)
-        if not new_journey or new_journey.user_id != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not authorized to move question to this quiz",
-            )
-        question.quiz_id = question_data.quiz_id
-
-    try:
-        updated_question = await question_use_cases.update_question(question)
         return QuestionResponseWithAnswer(
             id=updated_question.id,
             text=updated_question.text,
             quiz_id=updated_question.quiz_id,
-            options=updated_question.options,
+            options=[
+                OptionAnswerResponse(
+                    id=opt.id,
+                    reference_id=opt.reference_id,
+                    text=opt.text,
+                    order=opt.order,
+                    is_correct=opt.is_correct,
+                )
+                for opt in updated_question.options
+            ],
             correct_answer=updated_question.correct_answer,
             created_at=updated_question.created_at,
             updated_at=updated_question.updated_at,
@@ -320,15 +268,17 @@ async def delete_question(
             status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found"
         )
 
-    journey_repo = JourneyRepositoryImpl(db)
-    journey_use_cases = JourneyUseCases(journey_repo)
-    journey = await journey_use_cases.get_journey(quiz.journey_id)
+    # Only check journey authorization if quiz has a journey
+    if quiz.journey_id:
+        journey_repo = JourneyRepositoryImpl(db)
+        journey_use_cases = JourneyUseCases(journey_repo)
+        journey = await journey_use_cases.get_journey(quiz.journey_id)
 
-    if not journey or journey.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to delete this question",
-        )
+        if not journey or journey.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to delete this question",
+            )
 
     try:
         await question_use_cases.delete_question(question_id)

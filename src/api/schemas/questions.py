@@ -20,7 +20,6 @@ class QuestionUpdate(BaseModel):
     text: Optional[str] = None
     options: Optional[List[OptionBase]] = Field(None, min_items=2, max_items=6)
     correct_answer: Optional[str] = None
-    quiz_id: Optional[UUID] = None
 
 
 class QuestionResponse(BaseModel):
@@ -36,7 +35,7 @@ class QuestionResponse(BaseModel):
 
 
 class QuestionResponseWithAnswer(QuestionResponse):
-    correct_answer: str
+    correct_answer: int
 
 
 # Answer Checking

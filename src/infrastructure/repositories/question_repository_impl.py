@@ -20,6 +20,7 @@ class QuestionRepositoryImpl(QuestionRepository):
         options = [
             Option(
                 id=opt.id,
+                reference_id=opt.reference_id,
                 text=opt.text,
                 order=opt.order,
                 is_correct=opt.is_correct,
@@ -57,6 +58,7 @@ class QuestionRepositoryImpl(QuestionRepository):
             opt_models.append(
                 QuestionOptionModel(
                     id=opt.id,
+                    reference_id=opt.reference_id,
                     question_id=entity.id,
                     text=opt.text,
                     order=opt.order,
@@ -121,6 +123,7 @@ class QuestionRepositoryImpl(QuestionRepository):
                     QuestionOptionModel(
                         id=opt.id,
                         question_id=question.id,
+                        reference_id=opt.reference_id,
                         text=opt.text,
                         order=opt.order,
                         is_correct=opt.is_correct,

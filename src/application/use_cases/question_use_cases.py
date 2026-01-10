@@ -65,6 +65,7 @@ class QuestionUseCases:
         for opt in question.options or []:
             normalized_options.append(
                 Option(
+                    reference_id=getattr(opt, "reference_id", None),
                     text=getattr(opt, "text", None),
                     order=getattr(opt, "order", 0) or 0,
                     is_correct=getattr(opt, "is_correct", False) or False,
@@ -75,7 +76,7 @@ class QuestionUseCases:
 
         question.options = normalized_options
 
-        if question.correct_answer not in [option.text for option in question.options]:
+        if question.correct_answer not in [option.reference_id for option in question.options]:
             raise ValueError("Correct answer must be one of the options")
 
         return await self.question_repository.update(question)
