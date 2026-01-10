@@ -126,7 +126,16 @@ async def get_questions_by_quiz(
             id=question.id,
             text=question.text,
             quiz_id=question.quiz_id,
-            options=question.options,
+            options=[
+                OptionAnswerResponse(
+                    id=opt.id,
+                    reference_id=opt.reference_id,
+                    text=opt.text,
+                    order=opt.order,
+                    is_correct=opt.is_correct,
+                )
+                for opt in question.options
+            ],
             created_at=question.created_at,
             updated_at=question.updated_at,
         )
@@ -176,7 +185,16 @@ async def get_question(
         id=question.id,
         text=question.text,
         quiz_id=question.quiz_id,
-        options=question.options,
+        options=[
+            OptionAnswerResponse(
+                id=opt.id,
+                reference_id=opt.reference_id,
+                text=opt.text,
+                order=opt.order,
+                is_correct=opt.is_correct,
+            )
+            for opt in question.options
+        ],
         created_at=question.created_at,
         updated_at=question.updated_at,
     )
