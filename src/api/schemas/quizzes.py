@@ -35,7 +35,7 @@ class QuizResponse(QuizBase):
     updated_at: datetime
     questions: Optional[List[QuestionResponse]] = []
 
-    class Config:
+    class ConfigDict:
         from_attributes = True
 
 
@@ -45,7 +45,7 @@ class QuizzesListResponse(BaseModel):
     total_items: int
     total_pages: int
 
-    class Config:
+    class ConfigDict:
         from_attributes = True
 
 

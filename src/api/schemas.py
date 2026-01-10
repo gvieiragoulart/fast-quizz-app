@@ -27,7 +27,7 @@ class UserResponse(UserBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
+    class ConfigDict:
         from_attributes = True
 
 
@@ -67,7 +67,7 @@ class JourneyResponse(JourneyBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
+    class ConfigDict:
         from_attributes = True
 
 #Options Schemas
@@ -84,13 +84,13 @@ class OptionAnswerResponse(BaseModel):
     order: int
     is_correct: bool
 
-    class Config:
+    class ConfigDict:
         from_attributes = True
  
 # Question Schemas
 class QuestionBase(BaseModel):
     text: str
-    options: List[OptionBase] = Field(..., min_items=2, max_items=6)
+    options: List[OptionBase] = Field(..., min_length=2, max_length=6)
     correct_answer: str
 
 
@@ -100,7 +100,7 @@ class QuestionCreate(QuestionBase):
 
 class QuestionUpdate(BaseModel):
     text: Optional[str] = None
-    options: Optional[List[OptionBase]] = Field(None, min_items=2, max_items=6)
+    options: Optional[List[OptionBase]] = Field(None, min_length=2, max_length=6)
     correct_answer: Optional[str] = None
     quiz_id: Optional[UUID] = None
 
@@ -113,7 +113,7 @@ class QuestionResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
+    class ConfigDict:
         from_attributes = True
 
 
@@ -161,7 +161,7 @@ class QuizResponse(QuizBase):
     updated_at: datetime
     questions: Optional[List[QuestionResponse]] = []
 
-    class Config:
+    class ConfigDict:
         from_attributes = True
 
 
@@ -171,5 +171,5 @@ class QuizzesListResponse(BaseModel):
     total_items: int
     total_pages: int
 
-    class Config:
+    class ConfigDict:
         from_attributes = True

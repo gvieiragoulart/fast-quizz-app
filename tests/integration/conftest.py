@@ -3,7 +3,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 @pytest.fixture(scope="function")
-def get_auth_token(client: TestClient, username: str = "testuser") -> str:
+def token(client: TestClient, username: str = "testuser") -> str:
     """Helper function to get authentication token."""
     # Register user
     client.post(

@@ -8,7 +8,7 @@ from .options import OptionBase, OptionAnswerResponse
 
 class QuestionBase(BaseModel):
     text: str
-    options: List[OptionBase] = Field(..., min_items=2, max_items=6)
+    options: List[OptionBase] = Field(..., min_length=2, max_length=6)
     correct_answer: int
 
 
@@ -18,7 +18,7 @@ class QuestionCreate(QuestionBase):
 
 class QuestionUpdate(BaseModel):
     text: Optional[str] = None
-    options: Optional[List[OptionBase]] = Field(None, min_items=2, max_items=6)
+    options: Optional[List[OptionBase]] = Field(None, min_length=2, max_length=6)
     correct_answer: Optional[str] = None
 
 
@@ -30,7 +30,7 @@ class QuestionResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
+    class ConfigDict:
         from_attributes = True
 
 

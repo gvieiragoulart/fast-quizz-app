@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 from uuid import UUID, uuid4
 from .option import Option
@@ -22,8 +22,8 @@ class Question:
         self.quiz_id = quiz_id
         self.options = options
         self.correct_answer = correct_answer
-        self.created_at = created_at or datetime.utcnow()
-        self.updated_at = updated_at or datetime.utcnow()
+        self.created_at = created_at or datetime.now(timezone.utc)
+        self.updated_at = updated_at or datetime.now(timezone.utc)
 
     def __repr__(self) -> str:
         return f"Question(id={self.id}, text={self.text[:50]}...)"

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict
 from uuid import UUID, uuid4
 
@@ -25,8 +25,8 @@ class Option:
         self.is_correct = is_correct
         self.image_url = image_url
         self.metadata = metadata or {}
-        self.created_at = created_at or datetime.utcnow()
-        self.updated_at = updated_at or datetime.utcnow()
+        self.created_at = created_at or datetime.now(timezone.utc)
+        self.updated_at = updated_at or datetime.now(timezone.utc)
 
     def __repr__(self) -> str:
         preview = self.text[:30] + "..." if self.text and len(self.text) > 30 else self.text

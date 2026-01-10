@@ -19,7 +19,7 @@ class OptionAnswerResponse(BaseModel):
     order: int
     is_correct: bool
 
-    class Config:
+    class ConfigDict:
         from_attributes = True
 
 

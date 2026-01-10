@@ -23,9 +23,8 @@ def make_options(texts: list) -> list:
     ]
 
 
-def test_create_question(client: TestClient, get_auth_token) -> None:
+def test_create_question(client: TestClient, token) -> None:
     """Test creating a question."""
-    token = get_auth_token
     quiz_id = create_quiz(client, token)
 
     response = client.post(
@@ -68,9 +67,8 @@ def test_create_question(client: TestClient, get_auth_token) -> None:
     assert len(data["options"]) == 4
 
 
-def test_create_question_invalid_answer(client: TestClient, get_auth_token) -> None:
+def test_create_question_invalid_answer(client: TestClient, token) -> None:
     """Test creating a question with invalid correct answer."""
-    token = get_auth_token
     quiz_id = create_quiz(client, token)
 
     response = client.post(
@@ -102,9 +100,8 @@ def test_create_question_invalid_answer(client: TestClient, get_auth_token) -> N
     assert response.status_code == 400
 
 
-def test_get_questions_by_quiz(client: TestClient, get_auth_token) -> None:
+def test_get_questions_by_quiz(client: TestClient, token) -> None:
     """Test getting all questions for a quiz."""
-    token = get_auth_token
     quiz_id = create_quiz(client, token)
 
     # Create questions
@@ -163,9 +160,8 @@ def test_get_questions_by_quiz(client: TestClient, get_auth_token) -> None:
     assert "correct_answer" not in data[0]
 
 
-def test_get_question_by_id(client: TestClient, get_auth_token) -> None:
+def test_get_question_by_id(client: TestClient, token) -> None:
     """Test getting a question by ID."""
-    token = get_auth_token
     quiz_id = create_quiz(client, token)
 
     # Create question with proper options format
@@ -191,9 +187,8 @@ def test_get_question_by_id(client: TestClient, get_auth_token) -> None:
     assert data["text"] == "Test Question"
     assert "correct_answer" not in data
 
-def test_update_question(client: TestClient, get_auth_token) -> None:
+def test_update_question(client: TestClient, token) -> None:
     """Test updating a question."""
-    token = get_auth_token
     quiz_id = create_quiz(client, token)
 
     # Create question with proper options format
@@ -222,9 +217,8 @@ def test_update_question(client: TestClient, get_auth_token) -> None:
     assert data["text"] == "Updated Question"
 
 
-def test_delete_question(client: TestClient, get_auth_token) -> None:
+def test_delete_question(client: TestClient, token) -> None:
     """Test deleting a question."""
-    token = get_auth_token
     quiz_id = create_quiz(client, token)
 
     # Create question with proper options format

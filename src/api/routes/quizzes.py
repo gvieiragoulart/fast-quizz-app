@@ -237,16 +237,17 @@ async def update_quiz(
             status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found"
         )
 
-    # Verify journey belongs to user
-    journey_repo = JourneyRepositoryImpl(db)
-    journey_use_cases = JourneyUseCases(journey_repo)
-    journey = await journey_use_cases.get_journey(quiz.journey_id)
+    # Only check journey authorization if quiz has a journey
+    if quiz.journey_id:
+        journey_repo = JourneyRepositoryImpl(db)
+        journey_use_cases = JourneyUseCases(journey_repo)
+        journey = await journey_use_cases.get_journey(quiz.journey_id)
 
-    if not journey or journey.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to update this quiz",
-        )
+        if not journey or journey.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to update this quiz",
+            )
 
     # Update fields if provided
     if quiz_data.title is not None:
@@ -255,6 +256,8 @@ async def update_quiz(
         quiz.description = quiz_data.description
     if quiz_data.journey_id is not None:
         # Verify new journey exists and belongs to user
+        journey_repo = JourneyRepositoryImpl(db)
+        journey_use_cases = JourneyUseCases(journey_repo)
         new_journey = await journey_use_cases.get_journey(quiz_data.journey_id)
         if not new_journey or new_journey.user_id != current_user.id:
             raise HTTPException(
@@ -293,16 +296,17 @@ async def delete_quiz(
             status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found"
         )
 
-    # Verify journey belongs to user
-    journey_repo = JourneyRepositoryImpl(db)
-    journey_use_cases = JourneyUseCases(journey_repo)
-    journey = await journey_use_cases.get_journey(quiz.journey_id)
+    # Only check journey authorization if quiz has a journey
+    if quiz.journey_id:
+        journey_repo = JourneyRepositoryImpl(db)
+        journey_use_cases = JourneyUseCases(journey_repo)
+        journey = await journey_use_cases.get_journey(quiz.journey_id)
 
-    if not journey or journey.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to delete this quiz",
-        )
+        if not journey or journey.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to delete this quiz",
+            )
 
     try:
         await quiz_use_cases.delete_quiz(quiz_id)

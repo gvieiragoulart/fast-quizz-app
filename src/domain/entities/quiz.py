@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID, uuid4
 
@@ -21,8 +21,8 @@ class Quiz:
         self.description = description
         self.journey_id = journey_id
         self.questions = questions or []
-        self.created_at = created_at or datetime.utcnow()
-        self.updated_at = updated_at or datetime.utcnow()
+        self.created_at = created_at or datetime.now(timezone.utc)
+        self.updated_at = updated_at or datetime.now(timezone.utc)
 
     def __repr__(self) -> str:
         return f"Quiz(id={self.id}, title={self.title}, journey_id={self.journey_id}, questions={len(self.questions)})"
