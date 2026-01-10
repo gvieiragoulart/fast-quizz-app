@@ -21,7 +21,7 @@ from ...application.use_cases import (
 )
 from ...domain.entities.quiz import Quiz
 from ...domain.entities.user import User
-from ..schemas import QuizCreate, QuizResponse, QuizUpdate, QuizzesListResponse
+from ..schemas import QuizCreate, QuizResponse, QuizUpdate, QuizzesListResponse, QuestionResponse
 from ..dependencies import get_current_active_user
 
 
@@ -91,7 +91,6 @@ async def create_quiz(
         id=created_quiz.id,
         title=created_quiz.title,
         description=created_quiz.description,
-        questions=created_questions,
         journey_id=created_quiz.journey_id,
         created_at=created_quiz.created_at,
         updated_at=created_quiz.updated_at,
