@@ -3,6 +3,7 @@ from .users import router as users_router
 from .journeys import router as journeys_router
 from .quizzes import router as quizzes_router
 from .questions import router as questions_router
+from .results import router as results_router
 
 __all__ = [
     "auth_router",
@@ -10,4 +11,5 @@ __all__ = [
     "journeys_router",
     "quizzes_router",
     "questions_router",
+    "results_router",
 ]

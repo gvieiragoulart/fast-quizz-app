@@ -7,6 +7,7 @@ from .api.routes import (
     journeys_router,
     quizzes_router,
     questions_router,
+    results_router,
 )
 from .infrastructure.database import Base, engine
 
@@ -34,6 +35,7 @@ app.include_router(users_router)
 app.include_router(journeys_router)
 app.include_router(quizzes_router)
 app.include_router(questions_router)
+app.include_router(results_router)
 
 
 @app.get("/")
