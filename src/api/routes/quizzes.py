@@ -64,6 +64,8 @@ async def create_quiz(
         title=quiz_data.title,
         description=quiz_data.description,
         journey_id=quiz_data.journey_id if quiz_data.journey_id else None,
+        estimated_time=quiz_data.estimated_time,
+        feedback_mode=quiz_data.feedback_mode,
     )
 
     created_quiz = await quiz_use_cases.create_quiz(quiz)
@@ -92,6 +94,8 @@ async def create_quiz(
         title=created_quiz.title,
         description=created_quiz.description,
         journey_id=created_quiz.journey_id,
+        estimated_time=created_quiz.estimated_time,
+        feedback_mode=created_quiz.feedback_mode,
         created_at=created_quiz.created_at,
         updated_at=created_quiz.updated_at,
     )
@@ -181,6 +185,8 @@ async def get_quizzes_by_journey(
             title=quiz.title,
             description=quiz.description,
             journey_id=quiz.journey_id,
+            estimated_time=quiz.estimated_time,
+            feedback_mode=quiz.feedback_mode,
             created_at=quiz.created_at,
             updated_at=quiz.updated_at,
         )
@@ -211,6 +217,8 @@ async def get_quiz(
         title=quiz.title,
         description=quiz.description,
         journey_id=quiz.journey_id,
+        estimated_time=quiz.estimated_time,
+        feedback_mode=quiz.feedback_mode,
         created_at=quiz.created_at,
         updated_at=quiz.updated_at,
         questions=quiz.questions or [],
@@ -253,6 +261,10 @@ async def update_quiz(
         quiz.title = quiz_data.title
     if quiz_data.description is not None:
         quiz.description = quiz_data.description
+    if quiz_data.estimated_time is not None:
+        quiz.estimated_time = quiz_data.estimated_time
+    if quiz_data.feedback_mode is not None:
+        quiz.feedback_mode = quiz_data.feedback_mode
     if quiz_data.journey_id is not None:
         # Verify new journey exists and belongs to user
         journey_repo = JourneyRepositoryImpl(db)
@@ -272,6 +284,8 @@ async def update_quiz(
             title=updated_quiz.title,
             description=updated_quiz.description,
             journey_id=updated_quiz.journey_id,
+            estimated_time=updated_quiz.estimated_time,
+            feedback_mode=updated_quiz.feedback_mode,
             created_at=updated_quiz.created_at,
             updated_at=updated_quiz.updated_at,
         )

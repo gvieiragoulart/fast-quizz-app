@@ -1,6 +1,12 @@
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Optional
 from uuid import UUID, uuid4
+
+
+class FeedbackMode(str, Enum):
+    FINAL = "final"
+    IMEDIATO = "imediato"
 
 
 class Quiz:
@@ -13,6 +19,8 @@ class Quiz:
         journey_id: Optional[UUID] = None,
         id: Optional[UUID] = None,
         questions: Optional[list] = None,
+        estimated_time: Optional[int] = None,
+        feedback_mode: FeedbackMode = FeedbackMode.FINAL,
         created_at: Optional[datetime] = None,
         updated_at: Optional[datetime] = None,
     ):
@@ -21,6 +29,8 @@ class Quiz:
         self.description = description
         self.journey_id = journey_id
         self.questions = questions or []
+        self.estimated_time = estimated_time
+        self.feedback_mode = feedback_mode
         self.created_at = created_at or datetime.now(timezone.utc)
         self.updated_at = updated_at or datetime.now(timezone.utc)
 

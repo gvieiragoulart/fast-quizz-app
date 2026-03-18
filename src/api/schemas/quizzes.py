@@ -4,6 +4,7 @@ from uuid import UUID
 from datetime import datetime
 
 from .questions import QuestionBase, QuestionResponse
+from ...domain.entities.quiz import FeedbackMode
 
 
 class QuizzQuestionCreate(QuestionBase):
@@ -20,17 +21,27 @@ class QuizCreate(QuizBase):
     journey_id: Optional[UUID] = Field(
         None, description="ID of the journey this quiz belongs to"
     )
+    estimated_time: Optional[int] = Field(
+        None, ge=1, description="Estimated time in minutes to complete the quiz"
+    )
+    feedback_mode: FeedbackMode = Field(
+        FeedbackMode.FINAL, description="Feedback mode: 'final' or 'imediato'"
+    )
 
 
 class QuizUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=3, max_length=200)
     description: Optional[str] = None
     journey_id: Optional[UUID] = None
+    estimated_time: Optional[int] = Field(None, ge=1)
+    feedback_mode: Optional[FeedbackMode] = None
 
 
 class QuizResponse(QuizBase):
     id: UUID
     journey_id: Optional[UUID] = None
+    estimated_time: Optional[int] = None
+    feedback_mode: FeedbackMode = FeedbackMode.FINAL
     created_at: datetime
     updated_at: datetime
     questions: Optional[List[QuestionResponse]] = []

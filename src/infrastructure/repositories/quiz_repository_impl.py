@@ -2,7 +2,7 @@ from typing import Optional, List
 from uuid import UUID
 from sqlalchemy.orm import Session, joinedload
 
-from ...domain.entities.quiz import Quiz
+from ...domain.entities.quiz import Quiz, FeedbackMode
 from ...domain.repositories.quiz_repository import QuizRepository
 from ..database.models import QuizModel
 
@@ -20,6 +20,8 @@ class QuizRepositoryImpl(QuizRepository):
             title=model.title,
             description=model.description,
             journey_id=model.journey_id,
+            estimated_time=model.estimated_time,
+            feedback_mode=FeedbackMode(model.feedback_mode) if model.feedback_mode else FeedbackMode.FINAL,
             created_at=model.created_at,
             updated_at=model.updated_at,
         )
@@ -40,6 +42,8 @@ class QuizRepositoryImpl(QuizRepository):
             title=entity.title,
             description=entity.description,
             journey_id=entity.journey_id,
+            estimated_time=entity.estimated_time,
+            feedback_mode=entity.feedback_mode.value if entity.feedback_mode else "final",
             created_at=entity.created_at,
             updated_at=entity.updated_at,
         )
@@ -85,6 +89,8 @@ class QuizRepositoryImpl(QuizRepository):
             db_quiz.title = quiz.title
             db_quiz.description = quiz.description
             db_quiz.journey_id = quiz.journey_id
+            db_quiz.estimated_time = quiz.estimated_time
+            db_quiz.feedback_mode = quiz.feedback_mode.value if quiz.feedback_mode else "final"
             db_quiz.updated_at = quiz.updated_at
             self.db.commit()
             self.db.refresh(db_quiz)
