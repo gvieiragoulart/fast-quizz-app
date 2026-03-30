@@ -157,6 +157,8 @@ class QuizUpdate(BaseModel):
 class QuizResponse(QuizBase):
     id: UUID
     journey_id: Optional[UUID] = None
+    estimated_time: Optional[int] = None
+    feedback_mode: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     questions: Optional[List[QuestionResponse]] = []

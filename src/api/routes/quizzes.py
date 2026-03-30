@@ -134,6 +134,8 @@ async def get_latest_quizzes(page: int = 1, db: Session = Depends(get_db)) -> Qu
             "title": q.title,
             "description": q.description,
             "journey_id": q.journey_id,
+            "estimated_time": q.estimated_time,
+            "feedback_mode": q.feedback_mode,
             "created_at": q.created_at,
             "updated_at": q.updated_at,
             "questions": [],
@@ -142,8 +144,8 @@ async def get_latest_quizzes(page: int = 1, db: Session = Depends(get_db)) -> Qu
     ]
 
     return QuizzesListResponse(
-        items=items, 
-        total_items=total_items, 
+        items=items,
+        total_items=total_items,
         total_pages=total_pages
     )
 
@@ -361,6 +363,8 @@ async def get_latest_quizzes(page: int = 1, db: Session = Depends(get_db)) -> Qu
             "title": q.title,
             "description": q.description,
             "journey_id": q.journey_id,
+            "estimated_time": q.estimated_time,
+            "feedback_mode": q.feedback_mode,
             "created_at": q.created_at,
             "updated_at": q.updated_at,
             "questions": [],
