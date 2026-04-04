@@ -20,6 +20,7 @@ class QuizRepositoryImpl(QuizRepository):
             title=model.title,
             description=model.description,
             journey_id=model.journey_id,
+            user_id=model.user_id,
             estimated_time=model.estimated_time,
             feedback_mode=FeedbackMode(model.feedback_mode) if model.feedback_mode else FeedbackMode.FINAL,
             created_at=model.created_at,
@@ -42,6 +43,7 @@ class QuizRepositoryImpl(QuizRepository):
             title=entity.title,
             description=entity.description,
             journey_id=entity.journey_id,
+            user_id=entity.user_id,
             estimated_time=entity.estimated_time,
             feedback_mode=entity.feedback_mode.value if entity.feedback_mode else "final",
             created_at=entity.created_at,
@@ -82,6 +84,18 @@ class QuizRepositoryImpl(QuizRepository):
         )
         return [self._to_entity(db_quiz) for db_quiz in db_quizzes]
 
+    async def get_by_user_id(self, user_id: UUID, skip: int = 0, limit: int = 100) -> List[Quiz]:
+        """Get all quizzes created by a specific user."""
+        db_quizzes = (
+            self.db.query(QuizModel)
+            .filter(QuizModel.user_id == user_id)
+            .order_by(QuizModel.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+        return [self._to_entity(db_quiz) for db_quiz in db_quizzes]
+
     async def update(self, quiz: Quiz) -> Quiz:
         """Update a quiz."""
         db_quiz = self.db.query(QuizModel).filter(QuizModel.id == quiz.id).first()
@@ -89,6 +103,7 @@ class QuizRepositoryImpl(QuizRepository):
             db_quiz.title = quiz.title
             db_quiz.description = quiz.description
             db_quiz.journey_id = quiz.journey_id
+            db_quiz.user_id = quiz.user_id
             db_quiz.estimated_time = quiz.estimated_time
             db_quiz.feedback_mode = quiz.feedback_mode.value if quiz.feedback_mode else "final"
             db_quiz.updated_at = quiz.updated_at

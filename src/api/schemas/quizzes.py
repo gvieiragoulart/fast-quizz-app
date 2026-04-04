@@ -40,6 +40,7 @@ class QuizUpdate(BaseModel):
 class QuizResponse(QuizBase):
     id: UUID
     journey_id: Optional[UUID] = None
+    user_id: Optional[UUID] = None
     estimated_time: Optional[int] = None
     feedback_mode: FeedbackMode = FeedbackMode.FINAL
     created_at: datetime

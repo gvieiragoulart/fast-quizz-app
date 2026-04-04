@@ -43,12 +43,14 @@ class QuizModel(Base):
     title = Column(String(200), nullable=False)
     description = Column(Text, nullable=False)
     journey_id = Column(UUID(as_uuid=True), ForeignKey("journeys.id"), nullable=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     estimated_time = Column(SmallInteger, nullable=True)
     feedback_mode = Column(String(20), nullable=False, default="final")
     created_at = Column(DateTime, default=datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc), nullable=False)
 
     journey = relationship("JourneyModel", back_populates="quizzes")
+    user = relationship("UserModel")
     questions = relationship("QuestionModel", back_populates="quiz", cascade="all, delete-orphan")
 
 

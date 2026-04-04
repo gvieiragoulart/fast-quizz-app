@@ -32,6 +32,14 @@ class QuizUseCases:
             journey_id=journey_id, skip=skip, limit=limit
         )
 
+    async def get_user_quizzes(
+        self, user_id: UUID, skip: int = 0, limit: int = 100
+    ) -> List[Quiz]:
+        """Get all quizzes created by a specific user."""
+        return await self.quiz_repository.get_by_user_id(
+            user_id=user_id, skip=skip, limit=limit
+        )
+
     async def update_quiz(self, quiz: Quiz) -> Quiz:
         """Update a quiz."""
         existing_quiz = await self.quiz_repository.get_by_id(quiz.id)

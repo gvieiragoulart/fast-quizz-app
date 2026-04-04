@@ -15,3 +15,6 @@ class ResultUseCases:
 
     async def get_results_by_quiz(self, quiz_id: UUID, skip: int = 0, limit: int = 100) -> List[Result]:
         return await self.result_repository.get_by_quiz_id(quiz_id, skip=skip, limit=limit)
+
+    async def get_results_by_user(self, user_id: UUID, skip: int = 0, limit: int = 100) -> List[Result]:
+        return await self.result_repository.get_by_user_id(user_id, skip=skip, limit=limit)

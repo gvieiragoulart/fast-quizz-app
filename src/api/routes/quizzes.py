@@ -64,6 +64,7 @@ async def create_quiz(
         title=quiz_data.title,
         description=quiz_data.description,
         journey_id=quiz_data.journey_id if quiz_data.journey_id else None,
+        user_id=current_user.id,
         estimated_time=quiz_data.estimated_time,
         feedback_mode=quiz_data.feedback_mode,
     )
@@ -94,6 +95,7 @@ async def create_quiz(
         title=created_quiz.title,
         description=created_quiz.description,
         journey_id=created_quiz.journey_id,
+        user_id=created_quiz.user_id,
         estimated_time=created_quiz.estimated_time,
         feedback_mode=created_quiz.feedback_mode,
         created_at=created_quiz.created_at,
@@ -134,6 +136,7 @@ async def get_latest_quizzes(page: int = 1, db: Session = Depends(get_db)) -> Qu
             "title": q.title,
             "description": q.description,
             "journey_id": q.journey_id,
+            "user_id": q.user_id,
             "estimated_time": q.estimated_time,
             "feedback_mode": q.feedback_mode,
             "created_at": q.created_at,
@@ -147,6 +150,52 @@ async def get_latest_quizzes(page: int = 1, db: Session = Depends(get_db)) -> Qu
         items=items,
         total_items=total_items,
         total_pages=total_pages
+    )
+
+
+@router.get("/me/created", response_model=QuizzesListResponse, status_code=status.HTTP_200_OK)
+async def get_my_created_quizzes(
+    page: int = 1,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> QuizzesListResponse:
+    """Get quizzes created by the current user."""
+    if page < 1:
+        page = 1
+    page_size = 20
+    skip = (page - 1) * page_size
+
+    quiz_repo = QuizRepositoryImpl(db)
+    quiz_use_cases = QuizUseCases(quiz_repo)
+
+    total_items = quiz_repo.db.query(func.count(QuizModel.id)).filter(
+        QuizModel.user_id == current_user.id
+    ).scalar() or 0
+    total_pages = math.ceil(total_items / page_size) if total_items else 0
+
+    quizzes = await quiz_use_cases.get_user_quizzes(
+        user_id=current_user.id, skip=skip, limit=page_size
+    )
+
+    items = [
+        QuizResponse(
+            id=quiz.id,
+            title=quiz.title,
+            description=quiz.description,
+            journey_id=quiz.journey_id,
+            user_id=quiz.user_id,
+            estimated_time=quiz.estimated_time,
+            feedback_mode=quiz.feedback_mode,
+            created_at=quiz.created_at,
+            updated_at=quiz.updated_at,
+        )
+        for quiz in quizzes
+    ]
+
+    return QuizzesListResponse(
+        items=items,
+        total_items=total_items,
+        total_pages=total_pages,
     )
 
 
@@ -187,6 +236,7 @@ async def get_quizzes_by_journey(
             title=quiz.title,
             description=quiz.description,
             journey_id=quiz.journey_id,
+            user_id=quiz.user_id,
             estimated_time=quiz.estimated_time,
             feedback_mode=quiz.feedback_mode,
             created_at=quiz.created_at,
@@ -219,6 +269,7 @@ async def get_quiz(
         title=quiz.title,
         description=quiz.description,
         journey_id=quiz.journey_id,
+        user_id=quiz.user_id,
         estimated_time=quiz.estimated_time,
         feedback_mode=quiz.feedback_mode,
         created_at=quiz.created_at,
@@ -286,6 +337,7 @@ async def update_quiz(
             title=updated_quiz.title,
             description=updated_quiz.description,
             journey_id=updated_quiz.journey_id,
+            user_id=updated_quiz.user_id,
             estimated_time=updated_quiz.estimated_time,
             feedback_mode=updated_quiz.feedback_mode,
             created_at=updated_quiz.created_at,
@@ -327,49 +379,3 @@ async def delete_quiz(
         await quiz_use_cases.delete_quiz(quiz_id)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-
-
-
-@router.get("/latest", response_model=QuizzesListResponse, status_code=status.HTTP_200_OK)
-async def get_latest_quizzes(page: int = 1, db: Session = Depends(get_db)) -> QuizzesListResponse:
-    """Public endpoint: return latest quizzes ordered by created_at desc, paginated (20 per page).
-
-    Returns a dict with keys: items (list of quizzes), total_items (int), total_pages (int).
-    """
-    if page < 1:
-        page = 1
-    page_size = 20
-    skip = (page - 1) * page_size
-
-    # use repository for DB access
-    quiz_repo = QuizRepositoryImpl(db)
-
-    # total count
-    total_items = quiz_repo.db.query(func.count(QuizModel.id)).scalar() or 0
-    total_pages = math.ceil(total_items / page_size) if total_items else 0
-
-    # run a lightweight query ordering by created_at desc
-    db_quizzes = (
-        quiz_repo.db.query(QuizModel)
-        .order_by(QuizModel.created_at.desc())
-        .offset(skip)
-        .limit(page_size)
-        .all()
-    )
-
-    items = [
-        {
-            "id": q.id,
-            "title": q.title,
-            "description": q.description,
-            "journey_id": q.journey_id,
-            "estimated_time": q.estimated_time,
-            "feedback_mode": q.feedback_mode,
-            "created_at": q.created_at,
-            "updated_at": q.updated_at,
-            "questions": [],
-        }
-        for q in db_quizzes
-    ]
-
-    return QuizzesListResponse(items=items, total_items=total_items, total_pages=total_pages)

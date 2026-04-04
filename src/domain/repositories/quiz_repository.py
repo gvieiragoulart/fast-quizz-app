@@ -29,6 +29,11 @@ class QuizRepository(ABC):
         pass
 
     @abstractmethod
+    async def get_by_user_id(self, user_id: UUID, skip: int = 0, limit: int = 100) -> List[Quiz]:
+        """Get all quizzes created by a specific user."""
+        pass
+
+    @abstractmethod
     async def update(self, quiz: Quiz) -> Quiz:
         """Update a quiz."""
         pass

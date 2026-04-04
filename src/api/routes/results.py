@@ -7,9 +7,40 @@ from ...infrastructure.database import get_db
 from ...infrastructure.repositories import QuizRepositoryImpl, ResultRepositoryImpl
 from ...application.use_cases import QuizUseCases, ResultUseCases
 from ...domain.entities.results import Result
+from ...domain.entities.user import User
 from ..schemas.results import ResultCreate, ResultResponse, ResultsListResponse
+from ..dependencies import get_current_active_user
 
 router = APIRouter(prefix="/api/results", tags=["results"])
+
+
+@router.get("/me", response_model=ResultsListResponse)
+async def get_my_results(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> ResultsListResponse:
+    """Get all quiz results for the current user."""
+    result_repo = ResultRepositoryImpl(db)
+    result_use_cases = ResultUseCases(result_repo)
+
+    results = await result_use_cases.get_results_by_user(
+        user_id=current_user.id, skip=skip, limit=limit
+    )
+    items = [
+        ResultResponse(
+            id=r.id,
+            user_id=r.user_id,
+            respondent_name=r.respondent_name,
+            quiz_id=r.quiz_id,
+            score=r.score,
+            total_questions=r.total_questions,
+            taken_at=r.taken_at,
+        )
+        for r in results
+    ]
+    return ResultsListResponse(items=items, total=len(items))
 
 
 @router.post("/", response_model=ResultResponse, status_code=status.HTTP_201_CREATED)

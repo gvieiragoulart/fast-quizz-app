@@ -48,3 +48,14 @@ class ResultRepositoryImpl(ResultRepository):
             .all()
         )
         return [self._to_entity(r) for r in db_results]
+
+    async def get_by_user_id(self, user_id: UUID, skip: int = 0, limit: int = 100) -> List[Result]:
+        db_results = (
+            self.db.query(ResultsModel)
+            .filter(ResultsModel.user_id == user_id)
+            .order_by(ResultsModel.taken_at.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+        return [self._to_entity(r) for r in db_results]
