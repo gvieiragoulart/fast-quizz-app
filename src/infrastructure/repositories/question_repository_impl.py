@@ -1,7 +1,10 @@
-from typing import Optional, List
+from typing import Annotated, Optional, List
 from uuid import UUID, uuid4
 from datetime import datetime
+from fastapi import Depends
 from sqlalchemy.orm import Session
+
+from src.infrastructure.database.connection import get_db
 
 from ...domain.entities.question import Question
 from ...domain.entities.option import Option
@@ -148,3 +151,7 @@ class QuestionRepositoryImpl(QuestionRepository):
             self.db.commit()
             return True
         return False
+
+
+def get_question_repository(db: Annotated[Session, Depends(get_db)]) -> QuestionRepository:
+    return QuestionRepositoryImpl(db)

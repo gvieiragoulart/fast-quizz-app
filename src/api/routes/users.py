@@ -1,17 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from typing import List
+from typing import Annotated, List
 from uuid import UUID
 
-from ...infrastructure.database import get_db
 from ...infrastructure.auth import get_password_hash
-from ...infrastructure.repositories import UserRepositoryImpl
 from ...application.use_cases import UserUseCases
+from ...application.use_cases.user_use_cases import get_user_use_cases
 from ...domain.entities.user import User
 from ..schemas import UserResponse, UserUpdate
 from ..dependencies import get_current_active_user
 
 router = APIRouter(prefix="/api/users", tags=["users"])
+UserUseCasesDep = Annotated[UserUseCases, Depends(get_user_use_cases)]
 
 
 @router.get("/me", response_model=UserResponse)
@@ -33,13 +32,10 @@ async def get_current_user_info(
 async def get_users(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db),
+    user_use_cases: UserUseCasesDep = ...,
     current_user: User = Depends(get_current_active_user),
 ) -> List[UserResponse]:
     """Get all users (requires authentication)."""
-    user_repo = UserRepositoryImpl(db)
-    user_use_cases = UserUseCases(user_repo)
-
     users = await user_use_cases.get_all_users(skip=skip, limit=limit)
     return [
         UserResponse(
@@ -57,13 +53,10 @@ async def get_users(
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user(
     user_id: UUID,
-    db: Session = Depends(get_db),
+    user_use_cases: UserUseCasesDep,
     current_user: User = Depends(get_current_active_user),
 ) -> UserResponse:
     """Get a user by ID."""
-    user_repo = UserRepositoryImpl(db)
-    user_use_cases = UserUseCases(user_repo)
-
     user = await user_use_cases.get_user(user_id)
     if not user:
         raise HTTPException(
@@ -84,14 +77,10 @@ async def get_user(
 async def update_user(
     user_id: UUID,
     user_data: UserUpdate,
-    db: Session = Depends(get_db),
+    user_use_cases: UserUseCasesDep,
     current_user: User = Depends(get_current_active_user),
 ) -> UserResponse:
     """Update a user."""
-    user_repo = UserRepositoryImpl(db)
-    user_use_cases = UserUseCases(user_repo)
-
-    # Only allow users to update their own data
     if user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -104,7 +93,6 @@ async def update_user(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
-    # Update fields if provided
     if user_data.username is not None:
         user.username = user_data.username
     if user_data.email is not None:
@@ -131,14 +119,10 @@ async def update_user(
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
     user_id: UUID,
-    db: Session = Depends(get_db),
+    user_use_cases: UserUseCasesDep,
     current_user: User = Depends(get_current_active_user),
 ) -> None:
     """Delete a user."""
-    user_repo = UserRepositoryImpl(db)
-    user_use_cases = UserUseCases(user_repo)
-
-    # Only allow users to delete their own account
     if user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

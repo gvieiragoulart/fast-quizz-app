@@ -1,5 +1,9 @@
-from typing import Optional, List
+from typing import Annotated, Optional, List
 from uuid import UUID
+
+from fastapi import Depends
+
+from src.infrastructure.repositories.journey_repository_impl import get_journey_repository
 
 from ...domain.entities.journey import Journey
 from ...domain.repositories.journey_repository import JourneyRepository
@@ -46,3 +50,9 @@ class JourneyUseCases:
             raise ValueError(f"Journey with ID '{journey_id}' not found")
 
         return await self.journey_repository.delete(journey_id)
+
+
+def get_journey_use_cases(
+    journey_repository: Annotated[JourneyRepository, Depends(get_journey_repository)],
+) -> JourneyUseCases:
+    return JourneyUseCases(journey_repository)

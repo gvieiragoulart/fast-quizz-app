@@ -1,6 +1,9 @@
-from typing import Optional, List
+from typing import Annotated, Optional, List
 from uuid import UUID
+from fastapi import Depends
 from sqlalchemy.orm import Session
+
+from src.infrastructure.database.connection import get_db
 
 from ...domain.entities.journey import Journey
 from ...domain.repositories.journey_repository import JourneyRepository
@@ -85,3 +88,7 @@ class JourneyRepositoryImpl(JourneyRepository):
             self.db.commit()
             return True
         return False
+
+
+def get_journey_repository(db: Annotated[Session, Depends(get_db)]) -> JourneyRepository:
+    return JourneyRepositoryImpl(db)

@@ -1,6 +1,9 @@
-from typing import Optional, List
+from typing import Annotated, Optional, List
 from uuid import UUID
+from fastapi import Depends
 from sqlalchemy.orm import Session
+
+from src.infrastructure.database.connection import get_db
 
 from ...domain.entities.user import User
 from ...domain.repositories.user_repository import UserRepository
@@ -87,3 +90,7 @@ class UserRepositoryImpl(UserRepository):
             self.db.commit()
             return True
         return False
+
+
+def get_user_repository(db: Annotated[Session, Depends(get_db)]) -> UserRepository:
+    return UserRepositoryImpl(db)

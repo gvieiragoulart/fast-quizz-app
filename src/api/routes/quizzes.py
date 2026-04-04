@@ -1,49 +1,39 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from typing import List
+from typing import Annotated, List
 from uuid import UUID
 import math
 
-from src.domain.entities.question import Question
-
 from ...infrastructure.database import get_db
-from ...infrastructure.repositories import (
-    QuizRepositoryImpl, 
-    JourneyRepositoryImpl,
-    QuestionRepositoryImpl,
-)
+from ...infrastructure.repositories import QuizRepositoryImpl
 from ...infrastructure.database.models import QuizModel
-from ...application.use_cases import (
-    QuizUseCases, 
-    JourneyUseCases,
-    QuestionUseCases,
-)
+from ...application.use_cases import QuizUseCases, JourneyUseCases, QuestionUseCases
+from ...application.use_cases.quiz_use_cases import get_quiz_use_cases
+from ...application.use_cases.journey_use_cases import get_journey_use_cases
+from ...application.use_cases.question_use_cases import get_question_use_cases
 from ...domain.entities.quiz import Quiz
+from ...domain.entities.question import Question
 from ...domain.entities.user import User
 from ..schemas import QuizCreate, QuizResponse, QuizUpdate, QuizzesListResponse, QuestionResponse
 from ..dependencies import get_current_active_user
 
-
 router = APIRouter(prefix="/api/quizzes", tags=["quizzes"])
+QuizUseCasesDep = Annotated[QuizUseCases, Depends(get_quiz_use_cases)]
+JourneyUseCasesDep = Annotated[JourneyUseCases, Depends(get_journey_use_cases)]
+QuestionUseCasesDep = Annotated[QuestionUseCases, Depends(get_question_use_cases)]
 
 
 @router.post("/", response_model=QuizResponse, status_code=status.HTTP_201_CREATED)
 async def create_quiz(
     quiz_data: QuizCreate,
-    db: Session = Depends(get_db),
+    quiz_use_cases: QuizUseCasesDep,
+    journey_use_cases: JourneyUseCasesDep,
+    question_use_cases: QuestionUseCasesDep,
     current_user: User = Depends(get_current_active_user),
 ) -> QuizResponse:
     """Create a new quiz."""
     if quiz_data.journey_id:
-        if not current_user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication required to create quiz in a journey",
-            )
-        
-        journey_repo = JourneyRepositoryImpl(db)
-        journey_use_cases = JourneyUseCases(journey_repo)
         journey = await journey_use_cases.get_journey(quiz_data.journey_id)
 
         if not journey:
@@ -56,9 +46,6 @@ async def create_quiz(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Not authorized to create quiz in this journey",
             )
-
-    quiz_repo = QuizRepositoryImpl(db)
-    quiz_use_cases = QuizUseCases(quiz_repo)
 
     quiz = Quiz(
         title=quiz_data.title,
@@ -75,8 +62,6 @@ async def create_quiz(
     created_questions = []
 
     if questions:
-        question_repo = QuestionRepositoryImpl(db)
-        question_use_cases = QuestionUseCases(question_repo)
         for question in questions:
             created_question = await question_use_cases.create_question(
                 Question(
@@ -114,14 +99,11 @@ async def get_latest_quizzes(page: int = 1, db: Session = Depends(get_db)) -> Qu
     page_size = 20
     skip = (page - 1) * page_size
 
-    # use repository for DB access
     quiz_repo = QuizRepositoryImpl(db)
 
-    # total count
     total_items = quiz_repo.db.query(func.count(QuizModel.id)).scalar() or 0
     total_pages = math.ceil(total_items / page_size) if total_items else 0
 
-    # run a lightweight query ordering by created_at desc
     db_quizzes = (
         quiz_repo.db.query(QuizModel)
         .order_by(QuizModel.created_at.desc())
@@ -156,6 +138,7 @@ async def get_latest_quizzes(page: int = 1, db: Session = Depends(get_db)) -> Qu
 @router.get("/me/created", response_model=QuizzesListResponse, status_code=status.HTTP_200_OK)
 async def get_my_created_quizzes(
     page: int = 1,
+    quiz_use_cases: QuizUseCasesDep = ...,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> QuizzesListResponse:
@@ -166,7 +149,6 @@ async def get_my_created_quizzes(
     skip = (page - 1) * page_size
 
     quiz_repo = QuizRepositoryImpl(db)
-    quiz_use_cases = QuizUseCases(quiz_repo)
 
     total_items = quiz_repo.db.query(func.count(QuizModel.id)).filter(
         QuizModel.user_id == current_user.id
@@ -204,13 +186,11 @@ async def get_quizzes_by_journey(
     journey_id: UUID,
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db),
+    quiz_use_cases: QuizUseCasesDep = ...,
+    journey_use_cases: JourneyUseCasesDep = ...,
     current_user: User = Depends(get_current_active_user),
 ) -> List[QuizResponse]:
     """Get all quizzes for a specific journey."""
-    # Verify journey exists and belongs to user
-    journey_repo = JourneyRepositoryImpl(db)
-    journey_use_cases = JourneyUseCases(journey_repo)
     journey = await journey_use_cases.get_journey(journey_id)
 
     if not journey:
@@ -223,9 +203,6 @@ async def get_quizzes_by_journey(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to access this journey",
         )
-
-    quiz_repo = QuizRepositoryImpl(db)
-    quiz_use_cases = QuizUseCases(quiz_repo)
 
     quizzes = await quiz_use_cases.get_journey_quizzes(
         journey_id=journey_id, skip=skip, limit=limit
@@ -249,16 +226,10 @@ async def get_quizzes_by_journey(
 @router.get("/{quiz_id}", response_model=QuizResponse)
 async def get_quiz(
     quiz_id: UUID,
-    db: Session = Depends(get_db),
+    quiz_use_cases: QuizUseCasesDep,
 ) -> QuizResponse:
     """Get a quiz by ID."""
-    quiz_repo = QuizRepositoryImpl(db)
-    quiz_use_cases = QuizUseCases(quiz_repo)
-
-    quiz = await quiz_use_cases.get_quiz(
-        quiz_id, 
-        include_questions=True
-    )
+    quiz = await quiz_use_cases.get_quiz(quiz_id, include_questions=True)
     if not quiz:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found"
@@ -278,29 +249,22 @@ async def get_quiz(
     )
 
 
-
-
 @router.put("/{quiz_id}", response_model=QuizResponse)
 async def update_quiz(
     quiz_id: UUID,
     quiz_data: QuizUpdate,
-    db: Session = Depends(get_db),
+    quiz_use_cases: QuizUseCasesDep,
+    journey_use_cases: JourneyUseCasesDep,
     current_user: User = Depends(get_current_active_user),
 ) -> QuizResponse:
     """Update a quiz."""
-    quiz_repo = QuizRepositoryImpl(db)
-    quiz_use_cases = QuizUseCases(quiz_repo)
-
     quiz = await quiz_use_cases.get_quiz(quiz_id)
     if not quiz:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found"
         )
 
-    # Only check journey authorization if quiz has a journey
     if quiz.journey_id:
-        journey_repo = JourneyRepositoryImpl(db)
-        journey_use_cases = JourneyUseCases(journey_repo)
         journey = await journey_use_cases.get_journey(quiz.journey_id)
 
         if not journey or journey.user_id != current_user.id:
@@ -309,7 +273,6 @@ async def update_quiz(
                 detail="Not authorized to update this quiz",
             )
 
-    # Update fields if provided
     if quiz_data.title is not None:
         quiz.title = quiz_data.title
     if quiz_data.description is not None:
@@ -319,9 +282,6 @@ async def update_quiz(
     if quiz_data.feedback_mode is not None:
         quiz.feedback_mode = quiz_data.feedback_mode
     if quiz_data.journey_id is not None:
-        # Verify new journey exists and belongs to user
-        journey_repo = JourneyRepositoryImpl(db)
-        journey_use_cases = JourneyUseCases(journey_repo)
         new_journey = await journey_use_cases.get_journey(quiz_data.journey_id)
         if not new_journey or new_journey.user_id != current_user.id:
             raise HTTPException(
@@ -350,23 +310,18 @@ async def update_quiz(
 @router.delete("/{quiz_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_quiz(
     quiz_id: UUID,
-    db: Session = Depends(get_db),
+    quiz_use_cases: QuizUseCasesDep,
+    journey_use_cases: JourneyUseCasesDep,
     current_user: User = Depends(get_current_active_user),
 ) -> None:
     """Delete a quiz."""
-    quiz_repo = QuizRepositoryImpl(db)
-    quiz_use_cases = QuizUseCases(quiz_repo)
-
     quiz = await quiz_use_cases.get_quiz(quiz_id)
     if not quiz:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found"
         )
 
-    # Only check journey authorization if quiz has a journey
     if quiz.journey_id:
-        journey_repo = JourneyRepositoryImpl(db)
-        journey_use_cases = JourneyUseCases(journey_repo)
         journey = await journey_use_cases.get_journey(quiz.journey_id)
 
         if not journey or journey.user_id != current_user.id:

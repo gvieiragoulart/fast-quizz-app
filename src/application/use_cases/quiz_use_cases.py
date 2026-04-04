@@ -1,13 +1,15 @@
-from typing import Optional, List
+from typing import Annotated, Optional, List
 from uuid import UUID
+
+from fastapi.params import Depends
+
+from src.infrastructure.repositories.quiz_repository_impl import get_quiz_repository
 
 from ...domain.entities.quiz import Quiz
 from ...domain.repositories.quiz_repository import QuizRepository
 
 
 class QuizUseCases:
-    """Use cases for Quiz entity."""
-
     def __init__(self, quiz_repository: QuizRepository):
         self.quiz_repository = quiz_repository
 
@@ -55,3 +57,6 @@ class QuizUseCases:
             raise ValueError(f"Quiz with ID '{quiz_id}' not found")
 
         return await self.quiz_repository.delete(quiz_id)
+
+def get_quiz_use_cases(quiz_repository: Annotated[QuizRepository, Depends(get_quiz_repository)]) -> QuizUseCases:
+    return QuizUseCases(quiz_repository)

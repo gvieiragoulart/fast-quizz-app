@@ -1,25 +1,24 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
-from sqlalchemy.orm import Session
-from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
 from pydantic import BaseModel
+from typing import Annotated
 
-from ...infrastructure.database import get_db
 from ...infrastructure.auth import (
     verify_password,
     create_access_token,
     get_password_hash,
     verify_token,
 )
-from ...infrastructure.repositories import UserRepositoryImpl
 from ...application.use_cases import UserUseCases
+from ...application.use_cases.user_use_cases import get_user_use_cases
 from ...domain.entities.user import User
 from ..schemas import Token, UserCreate, UserResponse
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
-# Define OAuth2 scheme
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+UserUseCasesDep = Annotated[UserUseCases, Depends(get_user_use_cases)]
 
 
 class LoginRequest(BaseModel):
@@ -31,13 +30,10 @@ class LoginRequest(BaseModel):
     "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
 )
 async def register(
-    user_data: UserCreate, db: Session = Depends(get_db)
+    user_data: UserCreate,
+    user_use_cases: UserUseCasesDep,
 ) -> UserResponse:
     """Register a new user."""
-    user_repo = UserRepositoryImpl(db)
-    user_use_cases = UserUseCases(user_repo)
-
-    # Create user entity
     hashed_password = get_password_hash(user_data.password)
     user = User(
         username=user_data.username,
@@ -62,15 +58,14 @@ async def register(
 @router.post("/login", response_model=Token)
 async def login(
     request: Request,
-    db: Session = Depends(get_db),
+    user_use_cases: UserUseCasesDep,
 ) -> Token:
     """Authenticate a user and return a JWT token."""
-    # Check content type and parse data accordingly
     if request.headers.get("content-type") == "application/json":
         body = await request.json()
         email = body.get("email")
         password = body.get("password")
-    else:  # Assume application/x-www-form-urlencoded
+    else:
         form = await request.form()
         email = form.get("email")
         password = form.get("password")
@@ -80,9 +75,6 @@ async def login(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email and password are required",
         )
-
-    user_repo = UserRepositoryImpl(db)
-    user_use_cases = UserUseCases(user_repo)
 
     user = await user_use_cases.get_user_by_email(email)
 
@@ -107,7 +99,10 @@ async def login(
     )
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    user_use_cases: UserUseCasesDep = ...,
+) -> User:
     """Validate JWT token and return the current user."""
     try:
         payload = verify_token(token)
@@ -118,8 +113,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
                 detail="Invalid authentication credentials",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        user_repo = UserRepositoryImpl(db)
-        user = await user_repo.get_by_username(username)
+        user = await user_use_cases.get_user_by_username(username)
         if user is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

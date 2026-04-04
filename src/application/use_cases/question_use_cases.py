@@ -1,5 +1,9 @@
-from typing import Optional, List
+from typing import Annotated, Optional, List
 from uuid import UUID
+
+from fastapi import Depends
+
+from src.infrastructure.repositories.question_repository_impl import get_question_repository
 
 from ...domain.entities.question import Question
 from ...domain.entities.option import Option
@@ -88,3 +92,9 @@ class QuestionUseCases:
             raise ValueError(f"Question with ID '{question_id}' not found")
 
         return await self.question_repository.delete(question_id)
+
+
+def get_question_use_cases(
+    question_repository: Annotated[QuestionRepository, Depends(get_question_repository)],
+) -> QuestionUseCases:
+    return QuestionUseCases(question_repository)

@@ -1,5 +1,9 @@
-from typing import Optional, List
+from typing import Annotated, Optional, List
 from uuid import UUID
+
+from fastapi import Depends
+
+from src.infrastructure.repositories.user_repository_impl import get_user_repository
 
 from ...domain.entities.user import User
 from ...domain.repositories.user_repository import UserRepository
@@ -56,3 +60,9 @@ class UserUseCases:
             raise ValueError(f"User with ID '{user_id}' not found")
 
         return await self.user_repository.delete(user_id)
+
+
+def get_user_use_cases(
+    user_repository: Annotated[UserRepository, Depends(get_user_repository)],
+) -> UserUseCases:
+    return UserUseCases(user_repository)

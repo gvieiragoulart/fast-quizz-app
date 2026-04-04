@@ -1,15 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from typing import List
+from typing import Annotated, List
 from uuid import UUID
 
-from ...infrastructure.database import get_db
-from ...infrastructure.repositories import (
-    QuestionRepositoryImpl,
-    QuizRepositoryImpl,
-    JourneyRepositoryImpl,
-)
 from ...application.use_cases import QuestionUseCases, QuizUseCases, JourneyUseCases
+from ...application.use_cases.question_use_cases import get_question_use_cases
+from ...application.use_cases.quiz_use_cases import get_quiz_use_cases
+from ...application.use_cases.journey_use_cases import get_journey_use_cases
 from ...domain.entities.question import Question
 from ...domain.entities.user import User
 from ..schemas import (
@@ -24,44 +20,45 @@ from ..schemas import (
 from ..dependencies import get_current_active_user
 
 router = APIRouter(prefix="/api/questions", tags=["questions"])
+QuestionUseCasesDep = Annotated[QuestionUseCases, Depends(get_question_use_cases)]
+QuizUseCasesDep = Annotated[QuizUseCases, Depends(get_quiz_use_cases)]
+JourneyUseCasesDep = Annotated[JourneyUseCases, Depends(get_journey_use_cases)]
+
 
 @router.post("/batch", response_model=List[QuestionResponseWithAnswer], status_code=status.HTTP_201_CREATED)
 async def create_questions_batch(
     questions_data: List[QuestionCreate],
-    db: Session = Depends(get_db),
+    quiz_use_cases: QuizUseCasesDep,
+    question_use_cases: QuestionUseCasesDep,
     current_user: User = Depends(get_current_active_user),
 ) -> List[QuestionResponseWithAnswer]:
     """Create multiple questions in a batch."""
     created_questions = []
     for question_data in questions_data:
-        # Reuse the create_question logic for each question
         question_response = await create_question(
             question_data=question_data,
-            db=db,
+            quiz_use_cases=quiz_use_cases,
+            question_use_cases=question_use_cases,
             current_user=current_user,
         )
-        created_questions.append(question_response.dict())  # Ensure conversion to dict
+        created_questions.append(question_response.dict())
     return created_questions
+
 
 @router.post("/", response_model=QuestionResponseWithAnswer, status_code=status.HTTP_201_CREATED)
 async def create_question(
     question_data: QuestionCreate,
-    db: Session = Depends(get_db),
+    quiz_use_cases: QuizUseCasesDep,
+    question_use_cases: QuestionUseCasesDep,
     current_user: User = Depends(get_current_active_user),
 ) -> QuestionResponseWithAnswer:
     """Create a new question."""
-    # Verify quiz exists and belongs to user
-    quiz_repo = QuizRepositoryImpl(db)
-    quiz_use_cases = QuizUseCases(quiz_repo)
     quiz = await quiz_use_cases.get_quiz(question_data.quiz_id)
 
     if not quiz:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found"
         )
-
-    question_repo = QuestionRepositoryImpl(db)
-    question_use_cases = QuestionUseCases(question_repo)
 
     question = Question(
         text=question_data.text,
@@ -92,7 +89,7 @@ async def create_question(
         )
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, 
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
 
@@ -102,21 +99,16 @@ async def get_questions_by_quiz(
     quiz_id: UUID,
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db),
+    quiz_use_cases: QuizUseCasesDep = ...,
+    question_use_cases: QuestionUseCasesDep = ...,
 ) -> List[QuestionResponse]:
     """Get all questions for a specific quiz (without correct answers)."""
-    # Verify quiz exists and belongs to user
-    quiz_repo = QuizRepositoryImpl(db)
-    quiz_use_cases = QuizUseCases(quiz_repo)
     quiz = await quiz_use_cases.get_quiz(quiz_id)
 
     if not quiz:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found"
         )
-
-    question_repo = QuestionRepositoryImpl(db)
-    question_use_cases = QuestionUseCases(question_repo)
 
     questions = await question_use_cases.get_quiz_questions(
         quiz_id=quiz_id, skip=skip, limit=limit
@@ -146,22 +138,18 @@ async def get_questions_by_quiz(
 @router.get("/{question_id}", response_model=QuestionResponse)
 async def get_question(
     question_id: UUID,
-    db: Session = Depends(get_db),
+    question_use_cases: QuestionUseCasesDep,
+    quiz_use_cases: QuizUseCasesDep,
+    journey_use_cases: JourneyUseCasesDep,
     current_user: User = Depends(get_current_active_user),
 ) -> QuestionResponse:
     """Get a question by ID (without correct answer)."""
-    question_repo = QuestionRepositoryImpl(db)
-    question_use_cases = QuestionUseCases(question_repo)
-
     question = await question_use_cases.get_question(question_id)
     if not question:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Question not found"
         )
 
-    # Verify quiz and journey belong to user
-    quiz_repo = QuizRepositoryImpl(db)
-    quiz_use_cases = QuizUseCases(quiz_repo)
     quiz = await quiz_use_cases.get_quiz(question.quiz_id)
 
     if not quiz:
@@ -169,10 +157,7 @@ async def get_question(
             status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found"
         )
 
-    # Only check journey authorization if quiz has a journey
     if quiz.journey_id:
-        journey_repo = JourneyRepositoryImpl(db)
-        journey_use_cases = JourneyUseCases(journey_repo)
         journey = await journey_use_cases.get_journey(quiz.journey_id)
 
         if not journey or journey.user_id != current_user.id:
@@ -204,24 +189,19 @@ async def get_question(
 async def update_question(
     question_id: UUID,
     question_data: QuestionUpdate,
-    db: Session = Depends(get_db),
+    question_use_cases: QuestionUseCasesDep,
+    quiz_use_cases: QuizUseCasesDep,
     current_user: User = Depends(get_current_active_user),
 ) -> QuestionResponseWithAnswer:
     """Update a question."""
-    question_repo = QuestionRepositoryImpl(db)
-    question_use_cases = QuestionUseCases(question_repo)
-
     question = await question_use_cases.get_question(question_id)
     if not question:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Question not found"
         )
 
-    # Verify quiz and journey belong to user
-    quiz_repo = QuizRepositoryImpl(db)
-    quiz_use_cases = QuizUseCases(quiz_repo)
     quiz = await quiz_use_cases.get_quiz(question.quiz_id)
-        
+
     if not quiz:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found"
@@ -263,22 +243,18 @@ async def update_question(
 @router.delete("/{question_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_question(
     question_id: UUID,
-    db: Session = Depends(get_db),
+    question_use_cases: QuestionUseCasesDep,
+    quiz_use_cases: QuizUseCasesDep,
+    journey_use_cases: JourneyUseCasesDep,
     current_user: User = Depends(get_current_active_user),
 ) -> None:
     """Delete a question."""
-    question_repo = QuestionRepositoryImpl(db)
-    question_use_cases = QuestionUseCases(question_repo)
-
     question = await question_use_cases.get_question(question_id)
     if not question:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Question not found"
         )
 
-    # Verify quiz and journey belong to user
-    quiz_repo = QuizRepositoryImpl(db)
-    quiz_use_cases = QuizUseCases(quiz_repo)
     quiz = await quiz_use_cases.get_quiz(question.quiz_id)
 
     if not quiz:
@@ -286,10 +262,7 @@ async def delete_question(
             status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found"
         )
 
-    # Only check journey authorization if quiz has a journey
     if quiz.journey_id:
-        journey_repo = JourneyRepositoryImpl(db)
-        journey_use_cases = JourneyUseCases(journey_repo)
         journey = await journey_use_cases.get_journey(quiz.journey_id)
 
         if not journey or journey.user_id != current_user.id:

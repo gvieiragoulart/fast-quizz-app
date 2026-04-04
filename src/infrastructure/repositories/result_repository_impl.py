@@ -1,6 +1,9 @@
-from typing import List
+from typing import Annotated, List
 from uuid import UUID
+from fastapi import Depends
 from sqlalchemy.orm import Session
+
+from src.infrastructure.database.connection import get_db
 
 from ...domain.entities.results import Result
 from ...domain.repositories.result_repository import ResultRepository
@@ -59,3 +62,7 @@ class ResultRepositoryImpl(ResultRepository):
             .all()
         )
         return [self._to_entity(r) for r in db_results]
+
+
+def get_result_repository(db: Annotated[Session, Depends(get_db)]) -> ResultRepository:
+    return ResultRepositoryImpl(db)

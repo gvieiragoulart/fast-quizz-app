@@ -1,6 +1,9 @@
-from typing import Optional, List
+from typing import Optional, List, Annotated
+from fastapi import Depends
 from uuid import UUID
 from sqlalchemy.orm import Session, joinedload
+
+from src.infrastructure.database.connection import get_db
 
 from ...domain.entities.quiz import Quiz, FeedbackMode
 from ...domain.repositories.quiz_repository import QuizRepository
@@ -8,8 +11,6 @@ from ..database.models import QuizModel
 
 
 class QuizRepositoryImpl(QuizRepository):
-    """SQLAlchemy implementation of QuizRepository."""
-
     def __init__(self, db: Session):
         self.db = db
 
@@ -120,3 +121,6 @@ class QuizRepositoryImpl(QuizRepository):
             self.db.commit()
             return True
         return False
+
+def get_quiz_repository(db: Annotated[Session, Depends(get_db)]) -> QuizRepository:
+    return QuizRepositoryImpl(db)
