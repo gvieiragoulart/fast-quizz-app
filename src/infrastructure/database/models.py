@@ -46,6 +46,8 @@ class QuizModel(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     estimated_time = Column(SmallInteger, nullable=True)
     feedback_mode = Column(String(20), nullable=False, default="final")
+    difficulty = Column(String(20), nullable=True)
+    image_url = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc), nullable=False)
 

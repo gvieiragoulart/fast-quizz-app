@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from src.infrastructure.database.connection import get_db
 
-from ...domain.entities.quiz import Quiz, FeedbackMode
+from ...domain.entities.quiz import Quiz, FeedbackMode, Difficulty
 from ...domain.repositories.quiz_repository import QuizRepository
 from ..database.models import QuizModel
 
@@ -15,7 +15,6 @@ class QuizRepositoryImpl(QuizRepository):
         self.db = db
 
     def _to_entity(self, model: QuizModel, include_questions: bool = False) -> Quiz:
-        """Convert database model to domain entity."""
         quizz = Quiz(
             id=model.id,
             title=model.title,
@@ -24,6 +23,8 @@ class QuizRepositoryImpl(QuizRepository):
             user_id=model.user_id,
             estimated_time=model.estimated_time,
             feedback_mode=FeedbackMode(model.feedback_mode) if model.feedback_mode else FeedbackMode.FINAL,
+            difficulty=Difficulty(model.difficulty) if model.difficulty else None,
+            image_url=model.image_url,
             created_at=model.created_at,
             updated_at=model.updated_at,
         )
@@ -38,7 +39,6 @@ class QuizRepositoryImpl(QuizRepository):
         return quizz
 
     def _to_model(self, entity: Quiz) -> QuizModel:
-        """Convert domain entity to database model."""
         return QuizModel(
             id=entity.id,
             title=entity.title,
@@ -47,12 +47,13 @@ class QuizRepositoryImpl(QuizRepository):
             user_id=entity.user_id,
             estimated_time=entity.estimated_time,
             feedback_mode=entity.feedback_mode.value if entity.feedback_mode else "final",
+            difficulty=entity.difficulty.value if entity.difficulty else None,
+            image_url=entity.image_url,
             created_at=entity.created_at,
             updated_at=entity.updated_at,
         )
 
     async def create(self, quiz: Quiz) -> Quiz:
-        """Create a new quiz."""
         db_quiz = self._to_model(quiz)
         self.db.add(db_quiz)
         self.db.commit()
@@ -60,7 +61,6 @@ class QuizRepositoryImpl(QuizRepository):
         return self._to_entity(db_quiz)
 
     async def get_by_id(self, quiz_id: UUID, include_questions: bool = False) -> Optional[Quiz]:
-        """Get a quiz by ID; optionally include questions to avoid extra queries."""
         query = self.db.query(QuizModel).filter(QuizModel.id == quiz_id)
         if include_questions:
             query = query.options(joinedload(QuizModel.questions))
@@ -69,13 +69,11 @@ class QuizRepositoryImpl(QuizRepository):
 
 
     async def get_all(self, skip: int = 0, limit: int = 100) -> List[Quiz]:
-        """Get all quizzes with pagination."""
         db_quizzes = self.db.query(QuizModel).offset(skip).limit(limit).all()
         
         return [self._to_entity(db_quiz) for db_quiz in db_quizzes]
 
     async def get_by_journey_id(self, journey_id: UUID, skip: int = 0, limit: int = 100) -> List[Quiz]:
-        """Get all quizzes for a specific journey."""
         db_quizzes = (
             self.db.query(QuizModel)
             .filter(QuizModel.journey_id == journey_id)
@@ -86,7 +84,6 @@ class QuizRepositoryImpl(QuizRepository):
         return [self._to_entity(db_quiz) for db_quiz in db_quizzes]
 
     async def get_by_user_id(self, user_id: UUID, skip: int = 0, limit: int = 100) -> List[Quiz]:
-        """Get all quizzes created by a specific user."""
         db_quizzes = (
             self.db.query(QuizModel)
             .filter(QuizModel.user_id == user_id)
@@ -98,7 +95,6 @@ class QuizRepositoryImpl(QuizRepository):
         return [self._to_entity(db_quiz) for db_quiz in db_quizzes]
 
     async def update(self, quiz: Quiz) -> Quiz:
-        """Update a quiz."""
         db_quiz = self.db.query(QuizModel).filter(QuizModel.id == quiz.id).first()
         if db_quiz:
             db_quiz.title = quiz.title
@@ -107,6 +103,8 @@ class QuizRepositoryImpl(QuizRepository):
             db_quiz.user_id = quiz.user_id
             db_quiz.estimated_time = quiz.estimated_time
             db_quiz.feedback_mode = quiz.feedback_mode.value if quiz.feedback_mode else "final"
+            db_quiz.difficulty = quiz.difficulty.value if quiz.difficulty else None
+            db_quiz.image_url = quiz.image_url
             db_quiz.updated_at = quiz.updated_at
             self.db.commit()
             self.db.refresh(db_quiz)
@@ -114,7 +112,6 @@ class QuizRepositoryImpl(QuizRepository):
         raise ValueError(f"Quiz with ID '{quiz.id}' not found")
 
     async def delete(self, quiz_id: UUID) -> bool:
-        """Delete a quiz."""
         db_quiz = self.db.query(QuizModel).filter(QuizModel.id == quiz_id).first()
         if db_quiz:
             self.db.delete(db_quiz)

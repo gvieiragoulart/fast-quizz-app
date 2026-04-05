@@ -1,5 +1,8 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from .api.routes import (
     auth_router,
@@ -36,6 +39,11 @@ app.include_router(journeys_router)
 app.include_router(quizzes_router)
 app.include_router(questions_router)
 app.include_router(results_router)
+
+# Serve uploaded files
+uploads_dir = Path("uploads")
+uploads_dir.mkdir(exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 @app.get("/")

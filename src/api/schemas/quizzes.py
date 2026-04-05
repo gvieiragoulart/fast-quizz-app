@@ -4,7 +4,7 @@ from uuid import UUID
 from datetime import datetime
 
 from .questions import QuestionBase, QuestionResponse
-from ...domain.entities.quiz import FeedbackMode
+from ...domain.entities.quiz import FeedbackMode, Difficulty
 
 
 class QuizzQuestionCreate(QuestionBase):
@@ -27,6 +27,10 @@ class QuizCreate(QuizBase):
     feedback_mode: FeedbackMode = Field(
         FeedbackMode.FINAL, description="Feedback mode: 'final' or 'imediato'"
     )
+    difficulty: Difficulty = Field(
+        None, description="Difficulty level: 'facil', 'medio', 'dificil', 'expert'"
+    )
+    image_url: Optional[str] = None
 
 
 class QuizUpdate(BaseModel):
@@ -35,6 +39,8 @@ class QuizUpdate(BaseModel):
     journey_id: Optional[UUID] = None
     estimated_time: Optional[int] = Field(None, ge=1)
     feedback_mode: Optional[FeedbackMode] = None
+    difficulty: Optional[Difficulty] = None
+    image_url: Optional[str] = None
 
 
 class QuizResponse(QuizBase):
@@ -43,6 +49,8 @@ class QuizResponse(QuizBase):
     user_id: Optional[UUID] = None
     estimated_time: Optional[int] = None
     feedback_mode: FeedbackMode = FeedbackMode.FINAL
+    difficulty: Optional[Difficulty] = None
+    image_url: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     questions: Optional[List[QuestionResponse]] = []

@@ -9,9 +9,14 @@ class FeedbackMode(str, Enum):
     IMEDIATO = "imediato"
 
 
-class Quiz:
-    """Domain entity representing a quiz."""
+class Difficulty(str, Enum):
+    FACIL = "facil"
+    MEDIO = "medio"
+    DIFICIL = "dificil"
+    EXPERT = "expert"
 
+
+class Quiz:
     def __init__(
         self,
         title: str,
@@ -22,6 +27,8 @@ class Quiz:
         questions: Optional[list] = None,
         estimated_time: Optional[int] = None,
         feedback_mode: FeedbackMode = FeedbackMode.FINAL,
+        difficulty: Difficulty = Difficulty.EASY,
+        image_url: Optional[str] = None,
         created_at: Optional[datetime] = None,
         updated_at: Optional[datetime] = None,
     ):
@@ -33,6 +40,8 @@ class Quiz:
         self.questions = questions or []
         self.estimated_time = estimated_time
         self.feedback_mode = feedback_mode
+        self.difficulty = difficulty
+        self.image_url = image_url
         self.created_at = created_at or datetime.now(timezone.utc)
         self.updated_at = updated_at or datetime.now(timezone.utc)
 

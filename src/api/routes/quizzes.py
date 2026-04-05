@@ -1,4 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import os
+import uuid as uuid_mod
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import Annotated, List
@@ -15,7 +19,7 @@ from ...application.use_cases.question_use_cases import get_question_use_cases
 from ...domain.entities.quiz import Quiz
 from ...domain.entities.question import Question
 from ...domain.entities.user import User
-from ..schemas import QuizCreate, QuizResponse, QuizUpdate, QuizzesListResponse, QuestionResponse
+from ..schemas import QuizCreate, QuizResponse, QuizUpdate, QuizzesListResponse
 from ..dependencies import get_current_active_user
 
 router = APIRouter(prefix="/api/quizzes", tags=["quizzes"])
@@ -32,7 +36,6 @@ async def create_quiz(
     question_use_cases: QuestionUseCasesDep,
     current_user: User = Depends(get_current_active_user),
 ) -> QuizResponse:
-    """Create a new quiz."""
     if quiz_data.journey_id:
         journey = await journey_use_cases.get_journey(quiz_data.journey_id)
 
@@ -54,6 +57,8 @@ async def create_quiz(
         user_id=current_user.id,
         estimated_time=quiz_data.estimated_time,
         feedback_mode=quiz_data.feedback_mode,
+        difficulty=quiz_data.difficulty,
+        image_url=quiz_data.image_url,
     )
 
     created_quiz = await quiz_use_cases.create_quiz(quiz)
@@ -83,6 +88,8 @@ async def create_quiz(
         user_id=created_quiz.user_id,
         estimated_time=created_quiz.estimated_time,
         feedback_mode=created_quiz.feedback_mode,
+        difficulty=created_quiz.difficulty,
+        image_url=created_quiz.image_url,
         created_at=created_quiz.created_at,
         updated_at=created_quiz.updated_at,
     )
@@ -121,6 +128,8 @@ async def get_latest_quizzes(page: int = 1, db: Session = Depends(get_db)) -> Qu
             "user_id": q.user_id,
             "estimated_time": q.estimated_time,
             "feedback_mode": q.feedback_mode,
+            "difficulty": q.difficulty,
+            "image_url": q.image_url,
             "created_at": q.created_at,
             "updated_at": q.updated_at,
             "questions": [],
@@ -168,6 +177,8 @@ async def get_my_created_quizzes(
             user_id=quiz.user_id,
             estimated_time=quiz.estimated_time,
             feedback_mode=quiz.feedback_mode,
+            difficulty=quiz.difficulty,
+            image_url=quiz.image_url,
             created_at=quiz.created_at,
             updated_at=quiz.updated_at,
         )
@@ -216,6 +227,8 @@ async def get_quizzes_by_journey(
             user_id=quiz.user_id,
             estimated_time=quiz.estimated_time,
             feedback_mode=quiz.feedback_mode,
+            difficulty=quiz.difficulty,
+            image_url=quiz.image_url,
             created_at=quiz.created_at,
             updated_at=quiz.updated_at,
         )
@@ -243,6 +256,8 @@ async def get_quiz(
         user_id=quiz.user_id,
         estimated_time=quiz.estimated_time,
         feedback_mode=quiz.feedback_mode,
+        difficulty=quiz.difficulty,
+        image_url=quiz.image_url,
         created_at=quiz.created_at,
         updated_at=quiz.updated_at,
         questions=quiz.questions or [],
@@ -281,6 +296,10 @@ async def update_quiz(
         quiz.estimated_time = quiz_data.estimated_time
     if quiz_data.feedback_mode is not None:
         quiz.feedback_mode = quiz_data.feedback_mode
+    if quiz_data.difficulty is not None:
+        quiz.difficulty = quiz_data.difficulty
+    if quiz_data.image_url is not None:
+        quiz.image_url = quiz_data.image_url
     if quiz_data.journey_id is not None:
         new_journey = await journey_use_cases.get_journey(quiz_data.journey_id)
         if not new_journey or new_journey.user_id != current_user.id:
@@ -300,6 +319,8 @@ async def update_quiz(
             user_id=updated_quiz.user_id,
             estimated_time=updated_quiz.estimated_time,
             feedback_mode=updated_quiz.feedback_mode,
+            difficulty=updated_quiz.difficulty,
+            image_url=updated_quiz.image_url,
             created_at=updated_quiz.created_at,
             updated_at=updated_quiz.updated_at,
         )
@@ -334,3 +355,68 @@ async def delete_quiz(
         await quiz_use_cases.delete_quiz(quiz_id)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+UPLOAD_DIR = Path("uploads/quizzes")
+ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
+MAX_IMAGE_SIZE = 1 * 1024 * 1024  # 1 MB
+
+
+@router.post("/{quiz_id}/image", status_code=status.HTTP_201_CREATED)
+async def upload_quiz_image(
+    quiz_id: UUID,
+    file: UploadFile,
+    quiz_use_cases: QuizUseCasesDep,
+    current_user: User = Depends(get_current_active_user),
+) -> QuizResponse:
+    """Upload an image for a quiz. Max 1 MB, formats: JPEG, PNG, WebP."""
+    quiz = await quiz_use_cases.get_quiz(quiz_id)
+    if not quiz:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found"
+        )
+
+    if quiz.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to update this quiz",
+        )
+
+    if file.content_type not in ALLOWED_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid file type. Allowed: {', '.join(ALLOWED_CONTENT_TYPES)}",
+        )
+
+    contents = await file.read()
+    if len(contents) > MAX_IMAGE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File size exceeds 1 MB limit",
+        )
+
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+    ext = os.path.splitext(file.filename or "image.png")[1]
+    filename = f"{quiz_id}_{uuid_mod.uuid4().hex[:8]}{ext}"
+    file_path = UPLOAD_DIR / filename
+
+    with open(file_path, "wb") as f:
+        f.write(contents)
+
+    quiz.image_url = f"/uploads/quizzes/{filename}"
+    updated_quiz = await quiz_use_cases.update_quiz(quiz)
+
+    return QuizResponse(
+        id=updated_quiz.id,
+        title=updated_quiz.title,
+        description=updated_quiz.description,
+        journey_id=updated_quiz.journey_id,
+        user_id=updated_quiz.user_id,
+        estimated_time=updated_quiz.estimated_time,
+        feedback_mode=updated_quiz.feedback_mode,
+        difficulty=updated_quiz.difficulty,
+        image_url=updated_quiz.image_url,
+        created_at=updated_quiz.created_at,
+        updated_at=updated_quiz.updated_at,
+    )
