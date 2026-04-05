@@ -27,7 +27,7 @@ class Quiz:
         questions: Optional[list] = None,
         estimated_time: Optional[int] = None,
         feedback_mode: FeedbackMode = FeedbackMode.FINAL,
-        difficulty: Difficulty = Difficulty.EASY,
+        difficulty: Difficulty = Difficulty.FACIL,
         image_url: Optional[str] = None,
         created_at: Optional[datetime] = None,
         updated_at: Optional[datetime] = None,
