@@ -362,7 +362,7 @@ ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_IMAGE_SIZE = 1 * 1024 * 1024  # 1 MB
 
 
-@router.post("/{quiz_id}/image", status_code=status.HTTP_201_CREATED)
+@router.post("/{quiz_id}/image", status_code=status.HTTP_201_CREATED, )
 async def upload_quiz_image(
     quiz_id: UUID,
     file: UploadFile,

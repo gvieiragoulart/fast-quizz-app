@@ -49,7 +49,7 @@ class QuizResponse(QuizBase):
     user_id: Optional[UUID] = None
     estimated_time: Optional[int] = None
     feedback_mode: FeedbackMode = FeedbackMode.FINAL
-    difficulty: Optional[Difficulty] = None
+    difficulty: Difficulty = Difficulty.EASY
     image_url: Optional[str] = None
     created_at: datetime
     updated_at: datetime
